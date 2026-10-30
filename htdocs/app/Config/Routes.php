@@ -6,9 +6,10 @@ use CodeIgniter\Router\RouteCollection;
 $routes->get('/', 'Dashboard::index');
 $routes->get('activites', 'Dashboard::activities');
 
-// Routes Strava (remplacent COROS)
+// Routes Strava
 $routes->get('strava/connect', 'Strava::connect');
 $routes->get('strava/callback', 'Strava::callback');
+$routes->post('strava/sync', 'Strava::sync');
 
 // Routes Musculation
 $routes->get('workout/(:num)', 'Strength::workout/$1');

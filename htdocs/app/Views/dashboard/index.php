@@ -14,17 +14,19 @@
     </style>
 </head>
 <body>
-
 <nav class="navbar navbar-dark bg-dark">
-<div class="container">
-    <a class="navbar-brand fw-semibold" href="<?= site_url('/') ?>">Strava & Musculation</a>
-    <div class="d-flex gap-2">
-        <a class="btn btn-outline-light btn-sm" href="<?= site_url('activites') ?>">Activités</a>
-        <a class="btn btn-warning btn-sm" href="<?= site_url('strava/connect') ?>">Connecter Strava</a>
+    <div class="container">
+        <a class="navbar-brand fw-semibold" href="<?= site_url('/') ?>">Strava & Musculation</a>
+        <div class="d-flex gap-2">
+            <a class="btn btn-outline-light btn-sm" href="<?= site_url('activites') ?>">Activités</a>
+            <?php if (!session()->has('strava_access_token')): ?>
+                <a class="btn btn-warning btn-sm" href="<?= site_url('strava/connect') ?>">Connecter Strava</a>
+            <?php else: ?>
+                <span class="btn btn-success btn-sm disabled">Strava Connecté</span>
+            <?php endif; ?>
+        </div>
     </div>
-</div>
 </nav>
-
 <main class="container py-4">
     <?php if (session()->getFlashdata('success')): ?>
         <div class="alert alert-success"><?= esc(session()->getFlashdata('success')) ?></div>
@@ -38,22 +40,27 @@
             <h1 class="h3 mb-1">Tableau de bord</h1>
             <p class="muted mb-0">Vue d'ensemble de tes entraînements natation, running et musculation.</p>
         </div>
-        
-        <div class="d-flex gap-2 flex-wrap">
-            <!-- NOUVEAU FORMULAIRE D'IMPORTATION FIT -->
-            <form method="post" action="<?= site_url('coros/import') ?>" enctype="multipart/form-data" class="d-flex gap-2">
-                <?= csrf_field() ?>
-                <input type="file" name="fit_file" accept=".fit" class="form-control" required style="max-width: 250px;">
-                <button class="btn btn-secondary text-nowrap" type="submit">Importer FIT</button>
-            </form>
-
-            <!-- BOUTON DE SYNCHRONISATION -->
-            <form method="post" action="<?= site_url('coros/sync') ?>">
-                <?= csrf_field() ?>
-                <button class="btn btn-primary" type="submit">Synchroniser COROS</button>
-            </form>
-        </div>
     </div>
+
+    <!-- FORMULAIRE DE SYNCHRONISATION STRAVA -->
+    <?php if (session()->has('strava_access_token')): ?>
+    <div class="mb-4">
+        <form method="post" action="<?= site_url('strava/sync') ?>" class="d-flex flex-wrap gap-3 align-items-end bg-white p-3 rounded shadow-sm border" style="max-width: 600px;">
+            <?= csrf_field() ?>
+            <div>
+                <label for="start_date" class="form-label mb-1 fw-semibold small">Du :</label>
+                <input type="date" name="start_date" id="start_date" class="form-control" required max="<?= date('Y-m-d') ?>">
+            </div>
+            <div>
+                <label for="end_date" class="form-label mb-1 fw-semibold small">Au :</label>
+                <input type="date" name="end_date" id="end_date" class="form-control" required value="<?= date('Y-m-d') ?>" max="<?= date('Y-m-d') ?>">
+            </div>
+            <div>
+                <button class="btn btn-primary text-nowrap" type="submit">Importer les activités</button>
+            </div>
+        </form>
+    </div>
+    <?php endif; ?>
 
     <?php
         $totalDistanceKm = ((float) ($stats['total_distance_meters'] ?? 0)) / 1000;
@@ -63,7 +70,7 @@
 
     <!-- Stats Rapides -->
     <div class="row g-3 mb-4">
-        <div class="col-12 col-sm-6 col-xl-3"><div class="card stat-card h-100"><div class="card-body"><div class="muted">Activités COROS</div><div class="stat-value"><?= number_format((int) ($stats['total_activities'] ?? 0), 0, ',', ' ') ?></div></div></div></div>
+        <div class="col-12 col-sm-6 col-xl-3"><div class="card stat-card h-100"><div class="card-body"><div class="muted">Activités Strava</div><div class="stat-value"><?= number_format((int) ($stats['total_activities'] ?? 0), 0, ',', ' ') ?></div></div></div></div>
         <div class="col-12 col-sm-6 col-xl-3"><div class="card stat-card h-100"><div class="card-body"><div class="muted">Distance totale</div><div class="stat-value"><?= number_format($totalDistanceKm, 1, ',', ' ') ?> <small class="fs-6">km</small></div></div></div></div>
         <div class="col-12 col-sm-6 col-xl-3"><div class="card stat-card h-100"><div class="card-body"><div class="muted">Temps cumulé</div><div class="stat-value"><?= esc($durationText) ?> <small class="fs-6">h</small></div></div></div></div>
         <div class="col-12 col-sm-6 col-xl-3"><div class="card stat-card h-100"><div class="card-body"><div class="muted">FC moyenne</div><div class="stat-value"><?= (int) round((float) ($stats['average_heart_rate'] ?? 0)) ?> <small class="fs-6">bpm</small></div></div></div></div>
@@ -83,7 +90,7 @@
         </div>
         <div class="col-12 col-xl-5">
             <div class="card stat-card h-100"><div class="card-body">
-                <h2 class="h5 mb-3">Activités récentes</h2>
+                <h2 class="h5 mb-3">Activités Récentes</h2>
                 <?php if (empty($activities)): ?>
                     <p class="muted">Aucune activité enregistrée.</p>
                 <?php else: ?>
@@ -93,7 +100,7 @@
                                 <div class="d-flex justify-content-between gap-3">
                                     <div>
                                         <div class="fw-semibold"><?= esc($activity['name'] ?: ($activity['sport'] ?: 'Activité')) ?></div>
-                                        <div class="small muted"><?= esc($activity['started_at'] ?: 'Date inconnue') ?> • <?= esc($activity['sport'] ?: 'Sport non précisé') ?></div>
+                                        <div class="small muted"><?= esc($activity['started_at'] ?: 'Date inconnue') ?> | <?= esc($activity['sport'] ?: 'Sport non précisé') ?></div>
                                     </div>
                                     <div class="text-end text-nowrap fw-semibold">
                                         <?= number_format(((float) ($activity['distance_meters'] ?? 0)) / 1000, 2, ',', ' ') ?> km
@@ -134,7 +141,7 @@
                                     <div class="fw-semibold text-primary">Séance du <?= date('d/m/Y', strtotime($workout['date'])) ?></div>
                                     <div class="small muted text-truncate" style="max-width: 250px;"><?= esc($workout['notes']) ?></div>
                                 </div>
-                                <span class="badge bg-light text-dark border">Voir →</span>
+                                <span class="badge bg-light text-dark border">Voir -></span>
                             </a>
                         <?php endforeach ?>
                     </div>
@@ -143,15 +150,14 @@
         </div>
     </div>
 </main>
-
 <script>
-    // 1. Graphique Distance Mensuelle (COROS)
+    // 1. Graphique Distance Mensuelle
     <?php if (!empty($monthlyDistance)): ?>
         const monthlyLabels = <?= json_encode(array_column($monthlyDistance, 'month_key'), JSON_HEX_TAG | JSON_HEX_APOS | JSON_HEX_QUOT | JSON_HEX_AMP) ?>;
         const monthlyValues = <?= json_encode(array_map(static fn($row) => round(((float) $row['distance_meters']) / 1000, 2), $monthlyDistance)) ?>;
         new Chart(document.getElementById('distanceChart'), {
             type: 'bar',
-            data: { labels: monthlyLabels, datasets: [{ label: 'Distance (km)', data: monthlyValues, backgroundColor: '#0d6efd', borderWidth: 1 }] },
+            data: { labels: monthlyLabels, datasets: [{ label: 'Distance (km)', data: monthlyValues, backgroundColor: '#fc4c02', borderWidth: 1 }] },
             options: { responsive: true, scales: { y: { beginAtZero: true } } }
         });
     <?php endif ?>
@@ -164,27 +170,6 @@
             type: 'bar',
             data: { labels: tonnageLabels, datasets: [{ label: 'Tonnage Total (kg)', data: tonnageValues, backgroundColor: '#198754' }] },
             options: { responsive: true, scales: { y: { beginAtZero: true } } }
-        });
-    <?php endif ?>
-
-    // 3. Graphique Évolution Charge Max
-    <?php if (!empty($evolutionData)): ?>
-        const evolLabels = <?= json_encode(array_column($evolutionData, 'workout_date'), JSON_HEX_TAG | JSON_HEX_APOS | JSON_HEX_QUOT | JSON_HEX_AMP) ?>;
-        const evolValues = <?= json_encode(array_column($evolutionData, 'max_weight_lifted'), JSON_HEX_TAG | JSON_HEX_APOS | JSON_HEX_QUOT | JSON_HEX_AMP) ?>;
-        new Chart(document.getElementById('evolutionChart'), {
-            type: 'line',
-            data: { 
-                labels: evolLabels, 
-                datasets: [{ 
-                    label: 'Charge Max (kg)', 
-                    data: evolValues, 
-                    borderColor: '#dd4814',
-                    backgroundColor: 'rgba(221, 72, 20, 0.1)',
-                    fill: true,
-                    tension: 0.3 
-                }] 
-            },
-            options: { responsive: true, scales: { y: { beginAtZero: false } } }
         });
     <?php endif ?>
 </script>
