@@ -1,16 +1,15 @@
-<?php
-
-declare(strict_types=1);
+<?php declare(strict_types=1);
 
 use CodeIgniter\Router\RouteCollection;
 
 // @var RouteCollection $routes
 $routes->get('/', 'Dashboard::index');
 $routes->get('activites', 'Dashboard::activities');
-$routes->get('coros/connect', 'Coros::connect');
-$routes->get('coros/callback', 'Coros::callback');
-$routes->post('coros/sync', 'Coros::sync');
+
+// Routes Strava (remplacent COROS)
+$routes->get('strava/connect', 'Strava::connect');
+$routes->get('strava/callback', 'Strava::callback');
+
+// Routes Musculation
 $routes->get('workout/(:num)', 'Strength::workout/$1');
 $routes->get('exercise/(:num)', 'Strength::exercise/$1');
-// À ajouter avec vos autres routes :
-$routes->post('coros/import', 'Coros::import');

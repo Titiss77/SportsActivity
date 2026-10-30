@@ -16,13 +16,13 @@
 <body>
 
 <nav class="navbar navbar-dark bg-dark">
-    <div class="container">
-        <a class="navbar-brand fw-semibold" href="<?= site_url('/') ?>">COROS & Musculation</a>
-        <div class="d-flex gap-2">
-            <a class="btn btn-outline-light btn-sm" href="<?= site_url('activites') ?>">Activités</a>
-            <a class="btn btn-warning btn-sm" href="<?= site_url('coros/connect') ?>">Connecter COROS</a>
-        </div>
+<div class="container">
+    <a class="navbar-brand fw-semibold" href="<?= site_url('/') ?>">Strava & Musculation</a>
+    <div class="d-flex gap-2">
+        <a class="btn btn-outline-light btn-sm" href="<?= site_url('activites') ?>">Activités</a>
+        <a class="btn btn-warning btn-sm" href="<?= site_url('strava/connect') ?>">Connecter Strava</a>
     </div>
+</div>
 </nav>
 
 <main class="container py-4">
