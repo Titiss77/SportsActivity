@@ -69,14 +69,15 @@ class Strength extends BaseController
         ]);
     }
 
-    // NOUVEAU : Affiche le formulaire pour ajouter du poids
+    // Affiche le formulaire pour ajouter du poids
     public function form()
     {
         $date = $this->request->getGet('date') ?? date('Y-m-d');
         $name = $this->request->getGet('name') ?? 'Nouvelle séance';
 
         $db = \Config\Database::connect();
-        $exercises = $db->table('exercises')->get()->getResultArray();
+        // Trier les exercices par ordre alphabétique pour faciliter la recherche
+        $exercises = $db->table('exercises')->orderBy('name', 'ASC')->get()->getResultArray();
 
         return view('strength/form', [
             'title' => 'Renseigner : ' . $name,
@@ -85,7 +86,7 @@ class Strength extends BaseController
         ]);
     }
 
-    // NOUVEAU : Sauvegarde les données du formulaire
+    // Sauvegarde les données du formulaire dynamique
     public function save()
     {
         $date = $this->request->getPost('date');
@@ -93,29 +94,49 @@ class Strength extends BaseController
         
         $workoutModel = new StrengthWorkoutModel();
         
-        // On crée la session locale
+        // On crée la séance globale
         $workoutId = $workoutModel->insert([
             'date' => $date . ' 12:00:00', 
-            'notes' => $notes ?: 'Séance importée de Strava'
+            'notes' => $notes ?: 'Séance saisie manuellement'
         ]);
         
         $exerciseId = $this->request->getPost('exercise_id');
-        $weight = $this->request->getPost('weight');
-        $reps = $this->request->getPost('reps');
-        $setsCount = $this->request->getPost('sets');
+        $newExerciseName = $this->request->getPost('new_exercise_name');
+        $newExerciseGroup = $this->request->getPost('new_exercise_group') ?: 'Autre';
 
-        if ($workoutId && $exerciseId && $weight !== null) {
+        $db = \Config\Database::connect();
+
+        // Si l'utilisateur a choisi de créer un nouvel exercice
+        if ($exerciseId === 'new' && !empty($newExerciseName)) {
+            $db->table('exercises')->insert([
+                'name' => trim($newExerciseName),
+                'muscle_group' => trim($newExerciseGroup)
+            ]);
+            $exerciseId = $db->insertID();
+        }
+
+        // Récupération des tableaux envoyés par le formulaire
+        $repsArray = $this->request->getPost('reps');
+        $weightArray = $this->request->getPost('weight');
+
+        if ($workoutId && $exerciseId && is_array($repsArray) && is_array($weightArray)) {
             $setModel = new WorkoutSetModel();
             
-            // On insère le nombre de séries demandées
-            for ($i = 1; $i <= $setsCount; $i++) {
-                $setModel->insert([
-                    'workout_id'  => $workoutId,
-                    'exercise_id' => $exerciseId,
-                    'set_number'  => $i,
-                    'reps'        => $reps,
-                    'weight'      => $weight
-                ]);
+            $setNumber = 1;
+            foreach ($repsArray as $index => $reps) {
+                $weight = $weightArray[$index] ?? 0;
+                
+                // On ne sauvegarde que si les champs sont remplis
+                if ($reps !== '' && $weight !== '') {
+                    $setModel->insert([
+                        'workout_id'  => $workoutId,
+                        'exercise_id' => $exerciseId,
+                        'set_number'  => $setNumber,
+                        'reps'        => $reps,
+                        'weight'      => $weight
+                    ]);
+                    $setNumber++;
+                }
             }
         }
 
