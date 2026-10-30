@@ -34,6 +34,8 @@ if (!function_exists('formatTime')) {
         .section-title { color: #198754; font-weight: 700; display: flex; align-items: center; gap: 8px; }
         .btn-tonnage { transition: all 0.2s; cursor: pointer; }
         .btn-tonnage:hover { background-color: #0d6efd !important; color: white !important; border-color: #0d6efd !important; }
+        .workout-link { color: #198754; text-decoration: none; transition: color 0.2s; }
+        .workout-link:hover { color: #146c43; text-decoration: underline; }
     </style>
 </head>
 <body>
@@ -192,7 +194,9 @@ if (!function_exists('formatTime')) {
                         <?php if (empty($tonnageData)): ?>
                             <p class="text-muted small">Ajoutez des séries pour générer la courbe de tonnage.</p>
                         <?php else: ?>
-                            <canvas id="tonnageChart" height="150"></canvas>
+                            <div style="height: 250px;">
+                                <canvas id="tonnageChart"></canvas>
+                            </div>
                         <?php endif ?>
                     </div>
                 </div>
@@ -209,10 +213,16 @@ if (!function_exists('formatTime')) {
                         <?php else: ?>
                             <div class="list-group list-group-flush">
                                 <?php foreach ($recentWorkouts as $workout): ?>
-                                    <?php $wDate = date('Y-m-d', strtotime($workout['started_at'])); ?>
+                                    <?php 
+                                        $wDate = date('Y-m-d', strtotime($workout['started_at'])); 
+                                        $stravaId = $workout['strava_activity_id'];
+                                        $workoutId = $workout['local_workout_id'] ?? $stravaId; // On utilise l'ID Strava en fallback
+                                    ?>
                                     <div class="list-group-item py-3">
                                         <div class="d-flex justify-content-between align-items-start mb-2">
-                                            <div class="fw-semibold text-success text-truncate pe-2" style="max-width: 80%;"><?= esc($workout['name']) ?></div>
+                                            <a href="<?= site_url('workout/' . $workoutId) ?>" class="fw-semibold workout-link text-truncate pe-2" style="max-width: 80%;">
+                                                <?= esc($workout['name']) ?>
+                                            </a>
                                             <span class="small fw-bold text-dark text-nowrap"><?= formatTime($workout['duration_seconds']) ?></span>
                                         </div>
                                         <div class="d-flex align-items-center gap-2 small">
@@ -223,11 +233,11 @@ if (!function_exists('formatTime')) {
                                             <?php endif; ?>
                                             
                                             <?php if (isset($workout['local_volume'])): ?>
-                                                <a href="<?= site_url('workout/' . $workout['id']) ?>" class="text-decoration-none">
+                                                <a href="<?= site_url('workout/' . $workoutId) ?>" class="text-decoration-none">
                                                     <span class="badge bg-success text-white rounded-pill btn-tonnage">🏋️‍♂️ <?= number_format($workout['local_volume'], 0, ',', ' ') ?> kg</span>
                                                 </a>
                                             <?php else: ?>
-                                                <a href="<?= site_url('strength/form?date=' . $wDate . '&name=' . urlencode($workout['name'])) ?>" class="text-decoration-none">
+                                                <a href="<?= site_url('strength/form?strava_id=' . $stravaId . '&date=' . $wDate . '&name=' . urlencode($workout['name'])) ?>" class="text-decoration-none">
                                                     <span class="badge bg-light text-primary border border-primary rounded-pill btn-tonnage">➕ Renseigner (0 kg)</span>
                                                 </a>
                                             <?php endif; ?>
@@ -285,7 +295,8 @@ if (!function_exists('formatTime')) {
                     borderColor: '#198754', 
                     backgroundColor: 'rgba(25, 135, 84, 0.1)', 
                     fill: true, 
-                    tension: 0.3 
+                    tension: 0.3,
+                    maxBarThickness: 40
                 }] 
             },
             options: { 
