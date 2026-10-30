@@ -77,7 +77,7 @@ if (!function_exists('formatTime')) {
     </div>
     <?php else: ?>
     <div class="alert alert-info border-0 shadow-sm">
-        🔗 <strong>Strava n'est pas connecté.</strong> Cliquez sur "Connecter Strava" en haut à droite pour lier votre compte et importer vos activités.
+        🔗 <strong>Strava n'est pas connecté.</strong> Cliquez sur "Connecter Strava" en haut à droite pour lier votre compte.
     </div>
     <?php endif; ?>
 
@@ -94,7 +94,6 @@ if (!function_exists('formatTime')) {
                             <?php foreach ($currentMonthStats as $monthStat): ?>
                                 <?php 
                                     if ($monthStat['sport'] === 'WeightTraining') continue;
-
                                     $sportName = $monthStat['sport'];
                                     $goalDist = 20000;
                                     
@@ -111,7 +110,6 @@ if (!function_exists('formatTime')) {
                                         $sportName = 'Marche';
                                         $goalDist = ($userSettings['goal_walk_km'] ?? 20) * 1000;
                                     }
-
                                     $progress = min(100, ($monthStat['total_distance'] / max(1, $goalDist)) * 100);
                                 ?>
                                 <div class="col-12 col-md-6 col-xl-3">
@@ -152,17 +150,6 @@ if (!function_exists('formatTime')) {
                                                     <span class="text-muted"><?= date('d/m/y', strtotime($activity['started_at'])) ?></span>
                                                     <span class="fw-bold text-dark"><?= formatDist($activity['distance_meters']) ?></span>
                                                 </div>
-                                                <div class="d-flex flex-wrap gap-1 mt-1">
-                                                    <?php if (isset($activity['premium']['suffer_score'])): ?>
-                                                        <span class="badge bg-danger text-white rounded-pill condensed-text" style="font-size:0.7rem;">🔥 <?= esc($activity['premium']['suffer_score']) ?></span>
-                                                    <?php endif; ?>
-                                                    <?php if (isset($activity['premium']['average_watts']) && $activity['premium']['average_watts'] > 0): ?>
-                                                        <span class="badge bg-warning text-dark rounded-pill condensed-text" style="font-size:0.7rem;">⚡ <?= round($activity['premium']['average_watts']) ?>W</span>
-                                                    <?php endif; ?>
-                                                    <?php if (!empty($activity['elevation_gain_m']) && $activity['elevation_gain_m'] > 0): ?>
-                                                        <span class="badge bg-secondary text-white rounded-pill condensed-text" style="font-size:0.7rem;">⛰️ <?= round($activity['elevation_gain_m']) ?>m</span>
-                                                    <?php endif; ?>
-                                                </div>
                                             </div>
                                         <?php endforeach ?>
                                     </div>
@@ -173,11 +160,21 @@ if (!function_exists('formatTime')) {
                 </div>
             </div>
 
-            <!-- GRAPHIQUE DE STYLE STRAVA (COURBE ORANGE AVEC DÉGRADÉ) -->
+            <!-- GRAPHIQUE STRAVA AVEC FILTRE PAR SPORT -->
             <div class="col-12 col-xl-6">
                 <div class="card h-100">
                     <div class="card-body">
-                        <h3 class="h6 fw-bold mb-3 text-muted">Activité globale (Derniers mois)</h3>
+                        <div class="d-flex justify-content-between align-items-center mb-3">
+                            <h3 class="h6 fw-bold mb-0 text-muted">Progression des Activités</h3>
+                            <!-- Sélecteur de sport (Style Strava) -->
+                            <select id="sportFilter" class="form-select form-select-sm w-auto fw-semibold text-strava border-strava" onchange="updateStravaChart()">
+                                <option value="all">Tous les sports</option>
+                                <option value="Vélo">Vélo</option>
+                                <option value="Course à pied">Course à pied</option>
+                                <option value="Natation">Natation</option>
+                                <option value="Marche">Marche</option>
+                            </select>
+                        </div>
                         <div style="height: 250px; position: relative;">
                             <canvas id="stravaStyleChart"></canvas>
                         </div>
@@ -190,7 +187,6 @@ if (!function_exists('formatTime')) {
     <!-- Section Musculation -->
     <div class="mb-5">
         <h2 class="h4 border-bottom pb-2 mb-4 section-title">🏋️‍♂️ Renforcement & Musculation</h2>
-        
         <div class="row g-4">
             <div class="col-12 col-md-6">
                 <div class="card h-100">
@@ -199,9 +195,7 @@ if (!function_exists('formatTime')) {
                         <?php if (empty($tonnageData)): ?>
                             <p class="text-muted small">Aucune donnée de tonnage.</p>
                         <?php else: ?>
-                            <div style="height: 250px;">
-                                <canvas id="tonnageChart"></canvas>
-                            </div>
+                            <div style="height: 250px;"><canvas id="tonnageChart"></canvas></div>
                         <?php endif ?>
                     </div>
                 </div>
@@ -231,7 +225,6 @@ if (!function_exists('formatTime')) {
                                         </div>
                                         <div class="d-flex align-items-center gap-2 condensed-text">
                                             <span class="text-muted pe-2 border-end"><?= date('d/m', strtotime($workout['started_at'])) ?></span>
-                                            
                                             <?php if (isset($workout['local_volume'])): ?>
                                                 <span class="badge bg-success text-white rounded-pill" style="font-size:0.75rem;">🏋️‍♂️ <?= number_format($workout['local_volume'], 0, ',', ' ') ?> kg</span>
                                             <?php else: ?>
@@ -252,63 +245,73 @@ if (!function_exists('formatTime')) {
 <script>
     Chart.defaults.maintainAspectRatio = false;
 
-    // 1. Graphique style Strava (Courbe orange avec gradient de remplissage)
-    <?php if (!empty($monthlyDistance)): ?>
-        const monthlyLabels = <?= json_encode(array_column($monthlyDistance, 'month_key')) ?>;
-        const monthlyValues = <?= json_encode(array_map(static fn($row) => round(((float) $row['distance_meters']) / 1000, 2), $monthlyDistance)) ?>;
+    // Données brutes injectées depuis PHP pour le filtrage dynamique
+    const allActivities = <?= json_encode($rawActivitiesForChart ?? []) ?>;
+    const defaultLabels = <?= json_encode(array_column($monthlyDistance ?? [], 'month_key')) ?>;
+    const defaultValues = <?= json_encode(array_map(static fn($row) => round(((float) $row['distance_meters']) / 1000, 2), $monthlyDistance ?? [])) ?>;
 
-        const ctx = document.getElementById('stravaStyleChart').getContext('2d');
-        const gradient = ctx.createLinearGradient(0, 0, 0, 250);
-        gradient.addColorStop(0, 'rgba(252, 76, 2, 0.4)'); // Orange Strava transparent en haut
-        gradient.addColorStop(1, 'rgba(252, 76, 2, 0.0)'); // Totalement transparent en bas
+    const ctx = document.getElementById('stravaStyleChart').getContext('2d');
+    const gradient = ctx.createLinearGradient(0, 0, 0, 250);
+    gradient.addColorStop(0, 'rgba(252, 76, 2, 0.4)');
+    gradient.addColorStop(1, 'rgba(252, 76, 2, 0.0)');
 
-        new Chart(ctx, {
-            type: 'line',
-            data: {
-                labels: monthlyLabels,
-                datasets: [{
-                    data: monthlyValues,
-                    borderColor: '#fc4c02', // Orange Strava
-                    backgroundColor: gradient,
-                    borderWidth: 3,
-                    fill: true,
-                    tension: 0.35, // Effet arrondi lissé comme sur l'app Strava
-                    pointBackgroundColor: '#fc4c02',
-                    pointBorderColor: '#ffffff',
-                    pointBorderWidth: 2,
-                    pointRadius: 5,
-                    pointHoverRadius: 7
-                }]
+    let stravaChart = new Chart(ctx, {
+        type: 'line',
+        data: {
+            labels: defaultLabels,
+            datasets: [{
+                data: defaultValues,
+                borderColor: '#fc4c02',
+                backgroundColor: gradient,
+                borderWidth: 3,
+                fill: true,
+                tension: 0.35,
+                pointBackgroundColor: '#fc4c02',
+                pointBorderColor: '#ffffff',
+                pointBorderWidth: 2,
+                pointRadius: 5,
+                pointHoverRadius: 7
+            }]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            scales: {
+                y: { beginAtZero: true, grid: { color: '#f1f3f5' } },
+                x: { grid: { display: false } }
             },
-            options: {
-                responsive: true,
-                maintainAspectRatio: false,
-                scales: {
-                    y: {
-                        beginAtZero: true,
-                        grid: { color: '#f1f3f5' },
-                        ticks: { font: { size: 11 } }
-                    },
-                    x: {
-                        grid: { display: false },
-                        ticks: { font: { size: 11 } }
-                    }
-                },
-                plugins: {
-                    legend: { display: false },
-                    tooltip: {
-                        callbacks: {
-                            label: function(context) {
-                                return context.parsed.y + ' km';
-                            }
-                        }
-                    }
+            plugins: {
+                legend: { display: false },
+                tooltip: {
+                    callbacks: { label: function(context) { return context.parsed.y + ' km'; } }
+                }
+            }
+        }
+    });
+
+    // Fonction de filtrage dynamique du graphique au changement du select
+    function updateStravaChart() {
+        const selectedSport = document.getElementById('sportFilter').value;
+        
+        let filteredDataByMonth = {};
+        // Initialiser les mois par défaut à 0
+        defaultLabels.forEach(label => { filteredDataByMonth[label] = 0; });
+
+        allActivities.forEach(act => {
+            if (selectedSport === 'all' || act.sport === selectedSport) {
+                if (filteredDataByMonth.hasOwnProperty(act.date)) {
+                    filteredDataByMonth[act.date] += (act.distance / 1000);
                 }
             }
         });
-    <?php endif ?>
 
-    // 2. Graphique Tonnage Musculation
+        const newValues = defaultLabels.map(label => Math.round(filteredDataByMonth[label] * 100) / 100);
+
+        stravaChart.data.datasets[0].data = newValues;
+        stravaChart.update();
+    }
+
+    // Graphique Tonnage Musculation
     <?php if (!empty($tonnageData)): ?>
         const tonnageLabels = <?= json_encode(array_column($tonnageData, 'workout_date')) ?>;
         const tonnageValues = <?= json_encode(array_column($tonnageData, 'total_volume_kg')) ?>;
@@ -335,11 +338,7 @@ if (!function_exists('formatTime')) {
             options: { 
                 responsive: true, 
                 scales: { 
-                    y: { 
-                        beginAtZero: true, 
-                        suggestedMax: suggestedMaxTon,
-                        grid: { color: '#f1f3f5' } 
-                    }, 
+                    y: { beginAtZero: true, suggestedMax: suggestedMaxTon, grid: { color: '#f1f3f5' } }, 
                     x: { grid: { display: false } } 
                 }, 
                 plugins: { legend: { display: false } } 

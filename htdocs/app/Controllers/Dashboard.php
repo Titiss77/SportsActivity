@@ -15,10 +15,8 @@ class Dashboard extends BaseController
         $strengthModel = new WorkoutSetModel();
         $workoutModel  = new StrengthWorkoutModel();
 
-        // Récupérer les paramètres et les objectifs de l'utilisateur
         $userSettings = $db->table('user_settings')->where('user_id', $userId)->get()->getRowArray();
         
-        // S'il n'a pas de paramètres, on définit des défauts pour éviter les erreurs
         if (!$userSettings) {
             $userSettings = [
                 'strava_access_token' => null,
@@ -29,12 +27,11 @@ class Dashboard extends BaseController
             ];
         }
 
-        $recentActivities = $activityModel->getRecent($userId, 30);
+        $recentActivities = $activityModel->getRecent($userId, 100); // On récupère plus d'historique pour le graphe filtrable
         
         $activitiesBySport = [];
         $recentWorkouts = []; 
         
-        // On récupère le tonnage de l'utilisateur via une requête join (filtré par userId)
         $tonnageData = $strengthModel->getTotalVolumePerUser($userId); 
         $tonnageByDate = [];
         foreach ($tonnageData as $t) {
@@ -47,6 +44,9 @@ class Dashboard extends BaseController
              $localWorkoutIds[date('Y-m-d', strtotime($lw['date']))] = $lw['id'];
         }
         
+        // Tableau brut de toutes les activités pour alimenter le filtre JS du graphique
+        $rawActivitiesForChart = [];
+
         foreach ($recentActivities as $act) {
             $sport = $act['sport'] ?: 'Autre';
             $act['premium'] = json_decode($act['raw_data'], true);
@@ -55,28 +55,39 @@ class Dashboard extends BaseController
                 $dateKey = date('Y-m-d', strtotime($act['started_at']));
                 $act['local_volume'] = $tonnageByDate[$dateKey] ?? null;
                 $act['local_workout_id'] = $localWorkoutIds[$dateKey] ?? null; 
-                
                 $recentWorkouts[] = $act;
                 continue; 
             } 
             
+            // Normalisation des noms de sports
             if ($sport === 'Ride' || $sport === 'VirtualRide') $sport = 'Vélo';
             elseif ($sport === 'Run') $sport = 'Course à pied';
             elseif ($sport === 'Swim') $sport = 'Natation';
             elseif ($sport === 'Walk') $sport = 'Marche';
 
             $activitiesBySport[$sport][] = $act;
+
+            // Données formatées pour le graphique dynamique
+            $rawActivitiesForChart[] = [
+                'sport'    => $sport,
+                'date'     => date('Y-m', strtotime($act['started_at'])), // format Mois (ex: 2026-10)
+                'distance' => (float) $act['distance_meters']
+            ];
         }
 
+        // Calcul des distances mensuelles globales pour l'option "Tous les sports"
+        $monthlyDistance = $activityModel->getMonthlyDistance($userId, 6);
+
         $data = [
-            'title'             => 'Tableau de bord Global',
-            'userSettings'      => $userSettings,
-            'statsBySport'      => $activityModel->getStatsBySport($userId),
-            'currentMonthStats' => $activityModel->getCurrentMonthStats($userId),
-            'activitiesBySport' => $activitiesBySport,
-            'monthlyDistance'   => $activityModel->getMonthlyDistance($userId, 6), 
-            'tonnageData'       => $tonnageData,
-            'recentWorkouts'    => $recentWorkouts, 
+            'title'                  => 'Tableau de bord Global',
+            'userSettings'           => $userSettings,
+            'statsBySport'           => $activityModel->getStatsBySport($userId),
+            'currentMonthStats'      => $activityModel->getCurrentMonthStats($userId),
+            'activitiesBySport'      => $activitiesBySport,
+            'monthlyDistance'        => $monthlyDistance,
+            'rawActivitiesForChart' => $rawActivitiesForChart, // Transmis à la vue
+            'tonnageData'            => $tonnageData,
+            'recentWorkouts'         => $recentWorkouts, 
         ];
 
         return view('dashboard/index', $data);
