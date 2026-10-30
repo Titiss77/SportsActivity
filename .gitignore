@@ -1,3 +1,4 @@
 /htdocs/writable
 /htdocs/.env
 htdocs/.php-cs-fixer.cache
+*.sql*
