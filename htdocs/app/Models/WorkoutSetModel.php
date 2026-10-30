@@ -18,20 +18,20 @@ class WorkoutSetModel extends Model
     ];
 
     public function getTotalVolumePerUser(int $userId): array
-    {
-        $sql = "
-            SELECT 
-                DATE_FORMAT(sw.date, '%Y-%m-%d') as workout_date,
-                SUM(ws.reps * ws.weight) as total_volume_kg
-            FROM strength_workouts sw
-            JOIN workout_sets ws ON sw.id = ws.workout_id
-            WHERE sw.user_id = ?
-            GROUP BY sw.id
-            ORDER BY sw.date ASC
-        ";
-        
-        return $this->db->query($sql, [$userId])->getResultArray();
-    }
+{
+    $sql = "
+        SELECT 
+            DATE_FORMAT(sw.date, '%Y-%m-%d') as workout_date,
+            SUM(ws.reps * ws.weight) as total_volume_kg
+        FROM strength_workouts sw
+        JOIN workout_sets ws ON sw.id = ws.workout_id
+        WHERE sw.user_id = ?
+        GROUP BY DATE_FORMAT(sw.date, '%Y-%m-%d')
+        ORDER BY sw.date ASC
+    ";
+            
+    return $this->db->query($sql, [$userId])->getResultArray();
+}
 
     // AJOUT du userId pour ne filtrer que la progression de cet utilisateur
     public function getExerciseEvolution(int $userId, int $exerciseId): array

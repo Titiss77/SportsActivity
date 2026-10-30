@@ -143,7 +143,7 @@ if (!function_exists('formatTime')) {
                                         <span class="badge bg-light text-dark border condensed-text"><?= count($acts) ?> réc.</span>
                                     </div>
                                     <div class="list-group list-group-flush">
-                                        <?php foreach (array_slice($acts, 0, 4) as $activity): ?>
+                                        <?php foreach (array_slice($acts, 0, 5) as $activity): ?>
                                             <div class="list-group-item">
                                                 <div class="fw-semibold text-truncate condensed-text" style="max-width: 100%;"><?= esc($activity['name']) ?></div>
                                                 <div class="d-flex justify-content-between align-items-center condensed-text mt-1">

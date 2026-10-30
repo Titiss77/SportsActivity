@@ -52,18 +52,21 @@ class ActivityModel extends Model
     }
 
     public function getMonthlyDistance(int $userId, int $months = 6): array
-    {
-        $months = max(1, min($months, 24));
-        $sql = "
-            SELECT DATE_FORMAT(started_at, '%Y-%m') AS month_key,
-                   COALESCE(SUM(distance_meters), 0) AS distance_meters
-            FROM strava_activities
-            WHERE user_id = ? AND started_at >= DATE_SUB(CURDATE(), INTERVAL ? MONTH)
-            GROUP BY DATE_FORMAT(started_at, '%Y-%m')
-            ORDER BY month_key ASC
-        ";
-        return $this->db->query($sql, [$userId, $months])->getResultArray();
-    }
+{
+    $months = 6; // Limite à 6 mois pour éviter des requêtes trop lourdes
+    $sql = "
+        SELECT DATE_FORMAT(started_at, '%Y-%m') AS month_key,
+               COALESCE(SUM(distance_meters), 0) AS distance_meters
+        FROM strava_activities
+        WHERE user_id = ? 
+          AND sport != 'WeightTraining'
+          AND distance_meters > 0
+          AND started_at >= DATE_SUB(CURDATE(), INTERVAL ? MONTH)
+        GROUP BY DATE_FORMAT(started_at, '%Y-%m')
+        ORDER BY month_key ASC
+    ";
+    return $this->db->query($sql, [$userId, $months])->getResultArray();
+}
 
     public function upsertFromStrava(array $activity): bool
     {
