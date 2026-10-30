@@ -9,22 +9,29 @@ class Strength extends BaseController
     // Affiche le détail d'une séance (liste des exos et séries)
     public function workout($id = null)
     {
-        if ($id === null || !is_numeric($id)) {
+        if ($id === null) {
             throw PageNotFoundException::forPageNotFound();
         }
 
         $workoutModel = new StrengthWorkoutModel();
-        $workout = $workoutModel->find((int)$id);
+        
+        // Chercher par ID Strava ou ID local
+        $workout = $workoutModel->where('strava_activity_id', $id)->first();
+        if (!$workout && is_numeric($id)) {
+            $workout = $workoutModel->find((int)$id);
+        }
 
         if (!$workout) {
-            throw PageNotFoundException::forPageNotFound();
+            // Si la séance n'existe pas en base locale, rediriger vers le formulaire de création
+            return redirect()->to('strength/form?strava_id=' . $id)->with('error', 'Veuillez renseigner votre première charge pour cette séance.');
         }
 
         $setModel = new WorkoutSetModel();
-        $rawSets = $setModel->getWorkoutDetails((int)$id);
+        $rawSets = $setModel->getWorkoutDetails((int)$workout['id']);
 
         // Grouper les séries par exercice pour un affichage propre
         $exercises = [];
+        $totalVolume = 0;
         foreach ($rawSets as $set) {
             $exId = $set['exercise_id'];
             if (!isset($exercises[$exId])) {
@@ -36,16 +43,17 @@ class Strength extends BaseController
                 ];
             }
             $exercises[$exId]['sets'][] = $set;
+            $totalVolume += ($set['reps'] * $set['weight']);
         }
 
         return view('strength/workout', [
-            'title'     => 'Séance du ' . date('d/m/Y', strtotime($workout['date'])),
-            'workout'   => $workout,
-            'exercises' => $exercises
+            'title'       => 'Détail de la séance',
+            'workout'     => $workout,
+            'exercises'   => $exercises,
+            'totalVolume' => $totalVolume
         ]);
     }
 
-    // Affiche le graphique de progression d'un exercice précis
     public function exercise($id = null)
     {
         if ($id === null || !is_numeric($id)) {
@@ -69,36 +77,42 @@ class Strength extends BaseController
         ]);
     }
 
-    // Affiche le formulaire pour ajouter du poids
     public function form()
     {
         $date = $this->request->getGet('date') ?? date('Y-m-d');
         $name = $this->request->getGet('name') ?? 'Nouvelle séance';
+        $stravaId = $this->request->getGet('strava_id') ?? '';
+        $workoutId = $this->request->getGet('workout_id') ?? '';
 
         $db = \Config\Database::connect();
-        // Trier les exercices par ordre alphabétique pour faciliter la recherche
         $exercises = $db->table('exercises')->orderBy('name', 'ASC')->get()->getResultArray();
 
         return view('strength/form', [
-            'title' => 'Renseigner : ' . $name,
-            'date' => $date,
+            'title'     => 'Renseigner : ' . $name,
+            'date'      => $date,
+            'stravaId'  => $stravaId,
+            'workoutId' => $workoutId,
             'exercises' => $exercises
         ]);
     }
 
-    // Sauvegarde les données du formulaire dynamique
     public function save()
     {
         $date = $this->request->getPost('date');
         $notes = $this->request->getPost('notes');
+        $stravaId = $this->request->getPost('strava_id');
+        $workoutId = $this->request->getPost('workout_id');
         
         $workoutModel = new StrengthWorkoutModel();
         
-        // On crée la séance globale
-        $workoutId = $workoutModel->insert([
-            'date' => $date . ' 12:00:00', 
-            'notes' => $notes ?: 'Séance saisie manuellement'
-        ]);
+        // S'il n'y a pas d'ID local, on crée la séance et on la lie à Strava
+        if (empty($workoutId)) {
+            $workoutId = $workoutModel->insert([
+                'strava_activity_id' => $stravaId ?: null,
+                'date'  => $date . ' 12:00:00', 
+                'notes' => $notes ?: 'Séance saisie manuellement'
+            ]);
+        }
         
         $exerciseId = $this->request->getPost('exercise_id');
         $newExerciseName = $this->request->getPost('new_exercise_name');
@@ -106,27 +120,26 @@ class Strength extends BaseController
 
         $db = \Config\Database::connect();
 
-        // Si l'utilisateur a choisi de créer un nouvel exercice
         if ($exerciseId === 'new' && !empty($newExerciseName)) {
             $db->table('exercises')->insert([
-                'name' => trim($newExerciseName),
+                'name'         => trim($newExerciseName),
                 'muscle_group' => trim($newExerciseGroup)
             ]);
             $exerciseId = $db->insertID();
         }
 
-        // Récupération des tableaux envoyés par le formulaire
         $repsArray = $this->request->getPost('reps');
         $weightArray = $this->request->getPost('weight');
 
         if ($workoutId && $exerciseId && is_array($repsArray) && is_array($weightArray)) {
             $setModel = new WorkoutSetModel();
             
-            $setNumber = 1;
+            $existingSetsCount = $setModel->where('workout_id', $workoutId)->where('exercise_id', $exerciseId)->countAllResults();
+            $setNumber = $existingSetsCount + 1;
+            
             foreach ($repsArray as $index => $reps) {
                 $weight = $weightArray[$index] ?? 0;
                 
-                // On ne sauvegarde que si les champs sont remplis
                 if ($reps !== '' && $weight !== '') {
                     $setModel->insert([
                         'workout_id'  => $workoutId,
@@ -140,6 +153,6 @@ class Strength extends BaseController
             }
         }
 
-        return redirect()->to('/')->with('success', 'Séance de musculation enregistrée avec succès !');
+        return redirect()->to('/workout/' . $workoutId)->with('success', 'Séries enregistrées avec succès !');
     }
 }

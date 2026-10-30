@@ -33,6 +33,8 @@
     <form action="<?= site_url('strength/save') ?>" method="post">
         <?= csrf_field() ?>
         <input type="hidden" name="date" value="<?= esc($date) ?>">
+        <input type="hidden" name="strava_id" value="<?= esc($stravaId ?? '') ?>">
+        <input type="hidden" name="workout_id" value="<?= esc($workoutId ?? '') ?>">
 
         <!-- Sélection Exercice -->
         <div class="mb-4">
