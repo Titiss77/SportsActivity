@@ -2,6 +2,7 @@
 
 use App\Models\StrengthWorkoutModel;
 use App\Models\WorkoutSetModel;
+use App\Models\ActivityModel;
 use CodeIgniter\Exceptions\PageNotFoundException;
 
 class Strength extends BaseController
@@ -21,17 +22,34 @@ class Strength extends BaseController
             $workout = $workoutModel->find((int)$id);
         }
 
+        // Si la séance n'existe pas en base locale, on simule la page avec les données Strava
         if (!$workout) {
-            // Si la séance n'existe pas en base locale, rediriger vers le formulaire de création
-            return redirect()->to('strength/form?strava_id=' . $id)->with('error', 'Veuillez renseigner votre première charge pour cette séance.');
+            $activityModel = new ActivityModel();
+            $stravaActivity = $activityModel->where('strava_activity_id', $id)->first();
+
+            if (!$stravaActivity) {
+                throw PageNotFoundException::forPageNotFound();
+            }
+
+            $workout = [
+                'id'                 => null, // Pas encore d'ID local
+                'strava_activity_id' => $stravaActivity['strava_activity_id'],
+                'date'               => $stravaActivity['started_at'],
+                'notes'              => ''
+            ];
         }
 
         $setModel = new WorkoutSetModel();
-        $rawSets = $setModel->getWorkoutDetails((int)$workout['id']);
+        $rawSets = [];
+        
+        if (!empty($workout['id'])) {
+            $rawSets = $setModel->getWorkoutDetails((int)$workout['id']);
+        }
 
         // Grouper les séries par exercice pour un affichage propre
         $exercises = [];
         $totalVolume = 0;
+        
         foreach ($rawSets as $set) {
             $exId = $set['exercise_id'];
             if (!isset($exercises[$exId])) {
@@ -109,8 +127,8 @@ class Strength extends BaseController
         if (empty($workoutId)) {
             $workoutId = $workoutModel->insert([
                 'strava_activity_id' => $stravaId ?: null,
-                'date'  => $date . ' 12:00:00', 
-                'notes' => $notes ?: 'Séance saisie manuellement'
+                'date'               => $date . ' 12:00:00', 
+                'notes'              => $notes ?: 'Séance saisie manuellement'
             ]);
         }
         
@@ -153,6 +171,7 @@ class Strength extends BaseController
             }
         }
 
-        return redirect()->to('/workout/' . $workoutId)->with('success', 'Séries enregistrées avec succès !');
+        $redirectId = $stravaId ?: $workoutId;
+        return redirect()->to('/workout/' . $redirectId)->with('success', 'Séries enregistrées avec succès !');
     }
 }

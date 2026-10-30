@@ -32,8 +32,6 @@ if (!function_exists('formatTime')) {
         .bg-strava:hover { background-color: #e34301; color: white; }
         .list-group-item { border-color: #f1f3f5; }
         .section-title { color: #198754; font-weight: 700; display: flex; align-items: center; gap: 8px; }
-        .btn-tonnage { transition: all 0.2s; cursor: pointer; }
-        .btn-tonnage:hover { background-color: #0d6efd !important; color: white !important; border-color: #0d6efd !important; }
         .workout-link { color: #198754; text-decoration: none; transition: color 0.2s; }
         .workout-link:hover { color: #146c43; text-decoration: underline; }
     </style>
@@ -216,7 +214,7 @@ if (!function_exists('formatTime')) {
                                     <?php 
                                         $wDate = date('Y-m-d', strtotime($workout['started_at'])); 
                                         $stravaId = $workout['strava_activity_id'];
-                                        $workoutId = $workout['local_workout_id'] ?? $stravaId; // On utilise l'ID Strava en fallback
+                                        $workoutId = $workout['local_workout_id'] ?? $stravaId;
                                     ?>
                                     <div class="list-group-item py-3">
                                         <div class="d-flex justify-content-between align-items-start mb-2">
@@ -233,13 +231,9 @@ if (!function_exists('formatTime')) {
                                             <?php endif; ?>
                                             
                                             <?php if (isset($workout['local_volume'])): ?>
-                                                <a href="<?= site_url('workout/' . $workoutId) ?>" class="text-decoration-none">
-                                                    <span class="badge bg-success text-white rounded-pill btn-tonnage">🏋️‍♂️ <?= number_format($workout['local_volume'], 0, ',', ' ') ?> kg</span>
-                                                </a>
+                                                <span class="badge bg-success text-white rounded-pill">🏋️‍♂️ <?= number_format($workout['local_volume'], 0, ',', ' ') ?> kg</span>
                                             <?php else: ?>
-                                                <a href="<?= site_url('strength/form?strava_id=' . $stravaId . '&date=' . $wDate . '&name=' . urlencode($workout['name'])) ?>" class="text-decoration-none">
-                                                    <span class="badge bg-light text-primary border border-primary rounded-pill btn-tonnage">➕ Renseigner (0 kg)</span>
-                                                </a>
+                                                <span class="badge bg-light text-secondary border rounded-pill">0 kg</span>
                                             <?php endif; ?>
                                         </div>
                                     </div>
@@ -295,8 +289,7 @@ if (!function_exists('formatTime')) {
                     borderColor: '#198754', 
                     backgroundColor: 'rgba(25, 135, 84, 0.1)', 
                     fill: true, 
-                    tension: 0.3,
-                    maxBarThickness: 40
+                    tension: 0.3
                 }] 
             },
             options: { 

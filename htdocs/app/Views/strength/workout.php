@@ -33,7 +33,16 @@
             <?php endif; ?>
         </div>
         
-        <a href="<?= site_url('strength/form?workout_id=' . esc($workout['id']) . '&date=' . date('Y-m-d', strtotime($workout['date']))) ?>" class="btn btn-outline-success fw-bold rounded-pill">
+        <?php 
+        // Gestion de l'URL pour le bouton d'ajout (ID local ou Strava ID)
+        $addUrl = 'strength/form?date=' . date('Y-m-d', strtotime($workout['date']));
+        if (!empty($workout['id'])) {
+            $addUrl .= '&workout_id=' . esc($workout['id']);
+        } elseif (!empty($workout['strava_activity_id'])) {
+            $addUrl .= '&strava_id=' . esc($workout['strava_activity_id']);
+        }
+        ?>
+        <a href="<?= site_url($addUrl) ?>" class="btn btn-outline-success fw-bold rounded-pill">
             ➕ Ajouter un exercice
         </a>
     </div>
