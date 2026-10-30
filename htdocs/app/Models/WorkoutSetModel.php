@@ -17,7 +17,7 @@ class WorkoutSetModel extends Model
         'weight'
     ];
 
-    public function getTotalVolumePerWorkout(): array
+    public function getTotalVolumePerUser(int $userId): array
     {
         $sql = "
             SELECT 
@@ -25,14 +25,16 @@ class WorkoutSetModel extends Model
                 SUM(ws.reps * ws.weight) as total_volume_kg
             FROM strength_workouts sw
             JOIN workout_sets ws ON sw.id = ws.workout_id
+            WHERE sw.user_id = ?
             GROUP BY sw.id
             ORDER BY sw.date ASC
         ";
         
-        return $this->db->query($sql)->getResultArray();
+        return $this->db->query($sql, [$userId])->getResultArray();
     }
 
-    public function getExerciseEvolution($exerciseId): array
+    // AJOUT du userId pour ne filtrer que la progression de cet utilisateur
+    public function getExerciseEvolution(int $userId, int $exerciseId): array
     {
         $sql = "
             SELECT 
@@ -40,16 +42,15 @@ class WorkoutSetModel extends Model
                 MAX(ws.weight) as max_weight_lifted
             FROM strength_workouts sw
             JOIN workout_sets ws ON sw.id = ws.workout_id
-            WHERE ws.exercise_id = ?
+            WHERE ws.exercise_id = ? AND sw.user_id = ?
             GROUP BY sw.id
             ORDER BY sw.date ASC
         ";
         
-        return $this->db->query($sql, [(int)$exerciseId])->getResultArray();
+        return $this->db->query($sql, [$exerciseId, $userId])->getResultArray();
     }
 
-    // NOUVELLE MÉTHODE : Récupère tous les détails d'une séance
-    public function getWorkoutDetails($workoutId): array
+    public function getWorkoutDetails(int $workoutId): array
     {
         $sql = "
             SELECT 
@@ -60,6 +61,7 @@ class WorkoutSetModel extends Model
             WHERE ws.workout_id = ?
             ORDER BY ws.exercise_id, ws.set_number ASC
         ";
-        return $this->db->query($sql, [(int)$workoutId])->getResultArray();
+        
+        return $this->db->query($sql, [$workoutId])->getResultArray();
     }
 }

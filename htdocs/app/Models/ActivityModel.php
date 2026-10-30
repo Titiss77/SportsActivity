@@ -13,6 +13,7 @@ class ActivityModel extends Model
     protected $updatedField     = 'updated_at';
 
     protected $allowedFields = [
+        'user_id',
         'strava_activity_id',
         'name',
         'sport',
@@ -28,32 +29,14 @@ class ActivityModel extends Model
         'synced_at',
     ];
 
-    public function getRecent(int $limit = 20): array
+    public function getRecent(int $userId, int $limit = 20): array
     {
-        return $this->orderBy('started_at', 'DESC')
-            ->findAll(max(1, min($limit, 100)));
+        return $this->where('user_id', $userId)
+                    ->orderBy('started_at', 'DESC')
+                    ->findAll(max(1, min($limit, 100)));
     }
 
-    public function getStats(): array
-    {
-        $row = $this->select(
-            'COUNT(*) AS total_activities, 
-             COALESCE(SUM(distance_meters), 0) AS total_distance_meters, 
-             COALESCE(SUM(duration_seconds), 0) AS total_duration_seconds, 
-             COALESCE(AVG(avg_heart_rate), 0) AS average_heart_rate, 
-             COALESCE(SUM(elevation_gain_m), 0) AS total_elevation_gain'
-        )->first();
-
-        return $row ?? [
-            'total_activities'      => 0,
-            'total_distance_meters' => 0,
-            'total_duration_seconds'=> 0,
-            'average_heart_rate'    => 0,
-            'total_elevation_gain'  => 0,
-        ];
-    }
-
-    public function getStatsBySport(): array
+    public function getStatsBySport(int $userId): array
     {
         $sql = "
             SELECT sport,
@@ -61,24 +44,25 @@ class ActivityModel extends Model
                    COALESCE(SUM(distance_meters), 0) AS total_distance_meters, 
                    COALESCE(SUM(duration_seconds), 0) AS total_duration_seconds
             FROM strava_activities
+            WHERE user_id = ?
             GROUP BY sport
             ORDER BY total_activities DESC
         ";
-        return $this->db->query($sql)->getResultArray();
+        return $this->db->query($sql, [$userId])->getResultArray();
     }
 
-    public function getMonthlyDistance(int $months = 6): array
+    public function getMonthlyDistance(int $userId, int $months = 6): array
     {
         $months = max(1, min($months, 24));
         $sql = "
             SELECT DATE_FORMAT(started_at, '%Y-%m') AS month_key,
                    COALESCE(SUM(distance_meters), 0) AS distance_meters
             FROM strava_activities
-            WHERE started_at >= DATE_SUB(CURDATE(), INTERVAL ? MONTH)
+            WHERE user_id = ? AND started_at >= DATE_SUB(CURDATE(), INTERVAL ? MONTH)
             GROUP BY DATE_FORMAT(started_at, '%Y-%m')
             ORDER BY month_key ASC
         ";
-        return $this->db->query($sql, [$months])->getResultArray();
+        return $this->db->query($sql, [$userId, $months])->getResultArray();
     }
 
     public function upsertFromStrava(array $activity): bool
@@ -97,7 +81,7 @@ class ActivityModel extends Model
         return (bool) $this->insert($activity);
     }
 
-    public function getCurrentMonthStats(): array
+    public function getCurrentMonthStats(int $userId): array
     {
         $sql = "
             SELECT sport, 
@@ -105,10 +89,11 @@ class ActivityModel extends Model
                    COALESCE(SUM(distance_meters), 0) AS total_distance,
                    COALESCE(SUM(duration_seconds), 0) AS total_time
             FROM strava_activities
-            WHERE MONTH(started_at) = MONTH(CURDATE()) 
+            WHERE user_id = ? 
+              AND MONTH(started_at) = MONTH(CURDATE()) 
               AND YEAR(started_at) = YEAR(CURDATE())
             GROUP BY sport
         ";
-        return $this->db->query($sql)->getResultArray();
+        return $this->db->query($sql, [$userId])->getResultArray();
     }
 }

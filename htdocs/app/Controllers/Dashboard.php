@@ -8,23 +8,40 @@ class Dashboard extends BaseController
 {
     public function index()
     {
+        $userId = auth()->id();
+        $db = \Config\Database::connect();
+        
         $activityModel = new ActivityModel();
         $strengthModel = new WorkoutSetModel();
         $workoutModel  = new StrengthWorkoutModel();
 
-        $recentActivities = $activityModel->getRecent(30);
+        // Récupérer les paramètres et les objectifs de l'utilisateur
+        $userSettings = $db->table('user_settings')->where('user_id', $userId)->get()->getRowArray();
+        
+        // S'il n'a pas de paramètres, on définit des défauts pour éviter les erreurs
+        if (!$userSettings) {
+            $userSettings = [
+                'strava_access_token' => null,
+                'goal_ride_km' => 300,
+                'goal_run_km' => 60,
+                'goal_swim_km' => 20,
+                'goal_walk_km' => 20,
+            ];
+        }
+
+        $recentActivities = $activityModel->getRecent($userId, 30);
         
         $activitiesBySport = [];
         $recentWorkouts = []; 
-        $tonnageData = $strengthModel->getTotalVolumePerWorkout(); 
         
+        // On récupère le tonnage de l'utilisateur via une requête join (filtré par userId)
+        $tonnageData = $strengthModel->getTotalVolumePerUser($userId); 
         $tonnageByDate = [];
         foreach ($tonnageData as $t) {
             $tonnageByDate[$t['workout_date']] = $t['total_volume_kg'];
         }
 
-        // Pour faire la liaison entre Strava et les séances locales
-        $localWorkouts = $workoutModel->findAll();
+        $localWorkouts = $workoutModel->where('user_id', $userId)->findAll();
         $localWorkoutIds = [];
         foreach($localWorkouts as $lw) {
              $localWorkoutIds[date('Y-m-d', strtotime($lw['date']))] = $lw['id'];
@@ -37,7 +54,7 @@ class Dashboard extends BaseController
             if ($sport === 'WeightTraining') {
                 $dateKey = date('Y-m-d', strtotime($act['started_at']));
                 $act['local_volume'] = $tonnageByDate[$dateKey] ?? null;
-                $act['local_workout_id'] = $localWorkoutIds[$dateKey] ?? null; // Pour le lien
+                $act['local_workout_id'] = $localWorkoutIds[$dateKey] ?? null; 
                 
                 $recentWorkouts[] = $act;
                 continue; 
@@ -53,24 +70,15 @@ class Dashboard extends BaseController
 
         $data = [
             'title'             => 'Tableau de bord Global',
-            'stats'             => $activityModel->getStats(),
-            'statsBySport'      => $activityModel->getStatsBySport(),
-            'currentMonthStats' => $activityModel->getCurrentMonthStats(),
+            'userSettings'      => $userSettings,
+            'statsBySport'      => $activityModel->getStatsBySport($userId),
+            'currentMonthStats' => $activityModel->getCurrentMonthStats($userId),
             'activitiesBySport' => $activitiesBySport,
-            'monthlyDistance'   => $activityModel->getMonthlyDistance(6), 
+            'monthlyDistance'   => $activityModel->getMonthlyDistance($userId, 6), 
             'tonnageData'       => $tonnageData,
             'recentWorkouts'    => $recentWorkouts, 
         ];
 
         return view('dashboard/index', $data);
-    }
-
-    public function activities()
-    {
-        $model = new ActivityModel();
-        return view('dashboard/activities', [
-            'title'      => 'Historique Strava',
-            'activities' => $model->getRecent(100),
-        ]);
     }
 }

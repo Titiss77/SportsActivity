@@ -44,11 +44,24 @@ class Strava extends BaseController
             if ($response->getStatusCode() === 200) {
                 $data = json_decode($response->getBody(), true);
                 
-                // Sauvegarde temporaire en session
-                session()->set('strava_access_token', $data['access_token']);
-                session()->set('strava_refresh_token', $data['refresh_token']);
-                session()->set('strava_expires_at', $data['expires_at']);
-                session()->set('strava_athlete_id', $data['athlete']['id']);
+                // Enregistrement des jetons dans la table user_settings pour l'utilisateur connecté
+                $userId = auth()->id();
+                $db = \Config\Database::connect();
+                $settings = $db->table('user_settings')->where('user_id', $userId)->get()->getRow();
+
+                $tokensData = [
+                    'user_id'              => $userId,
+                    'strava_access_token'  => $data['access_token'],
+                    'strava_refresh_token' => $data['refresh_token'],
+                    'strava_expires_at'    => $data['expires_at'],
+                    'strava_athlete_id'    => $data['athlete']['id']
+                ];
+
+                if ($settings) {
+                    $db->table('user_settings')->where('user_id', $userId)->update($tokensData);
+                } else {
+                    $db->table('user_settings')->insert($tokensData);
+                }
                 
                 return redirect()->to('/')->with('success', 'Compte Strava connecté avec succès !');
             } else {
@@ -59,9 +72,27 @@ class Strava extends BaseController
         }
     }
 
+    public function disconnect()
+    {
+        $userId = auth()->id();
+        $db = \Config\Database::connect();
+        $db->table('user_settings')->where('user_id', $userId)->update([
+            'strava_access_token'  => null,
+            'strava_refresh_token' => null,
+            'strava_expires_at'    => null,
+            'strava_athlete_id'    => null
+        ]);
+
+        return redirect()->to('/profile')->with('success', 'Compte Strava déconnecté.');
+    }
+
     public function sync()
     {
-        if (!session()->has('strava_access_token')) {
+        $userId = auth()->id();
+        $db = \Config\Database::connect();
+        $settings = $db->table('user_settings')->where('user_id', $userId)->get()->getRow();
+
+        if (!$settings || empty($settings->strava_access_token)) {
             return redirect()->to('/')->with('error', 'Vous devez d\'abord connecter votre compte Strava.');
         }
 
@@ -75,7 +106,6 @@ class Strava extends BaseController
         $after = strtotime($startDate . ' 00:00:00');
         $before = strtotime($endDate . ' 23:59:59');
 
-        $accessToken = session()->get('strava_access_token');
         $client = \Config\Services::curlrequest();
         $activityModel = new ActivityModel();
         
@@ -86,7 +116,7 @@ class Strava extends BaseController
             do {
                 $response = $client->get('https://www.strava.com/api/v3/athlete/activities', [
                     'headers' => [
-                        'Authorization' => 'Bearer ' . $accessToken,
+                        'Authorization' => 'Bearer ' . $settings->strava_access_token,
                     ],
                     'query' => [
                         'before'   => $before,
@@ -98,7 +128,7 @@ class Strava extends BaseController
                 ]);
 
                 if ($response->getStatusCode() === 401) {
-                    session()->remove('strava_access_token');
+                    $db->table('user_settings')->where('user_id', $userId)->update(['strava_access_token' => null]);
                     return redirect()->to('/')->with('error', 'Votre session Strava a expiré. Veuillez vous reconnecter.');
                 }
 
@@ -114,7 +144,8 @@ class Strava extends BaseController
 
                 foreach ($activities as $stravaActivity) {
                     $activityData = [
-                        'strava_activity_id'      => (string) $stravaActivity['id'], // Mis à jour
+                        'user_id'                 => $userId, // Important pour le multi-utilisateur
+                        'strava_activity_id'      => (string) $stravaActivity['id'],
                         'name'                    => $stravaActivity['name'] ?? 'Activité Strava',
                         'sport'                   => $stravaActivity['sport_type'] ?? ($stravaActivity['type'] ?? 'Inconnu'),
                         'started_at'              => date('Y-m-d H:i:s', strtotime($stravaActivity['start_date_local'])),
@@ -127,7 +158,6 @@ class Strava extends BaseController
                         'raw_data'                => json_encode($stravaActivity)
                     ];
 
-                    // Mis à jour
                     if ($activityModel->upsertFromStrava($activityData)) {
                         $importedCount++;
                     }

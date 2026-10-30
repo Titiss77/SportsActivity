@@ -7,32 +7,42 @@ use CodeIgniter\Exceptions\PageNotFoundException;
 
 class Strength extends BaseController
 {
-    // Affiche le détail d'une séance (liste des exos et séries)
+    public function index()
+    {
+        $db = \Config\Database::connect();
+        $exercises = $db->table('exercises')->orderBy('name', 'ASC')->get()->getResultArray();
+        
+        return view('strength/index', [
+            'title' => 'Progression Musculation',
+            'exercises' => $exercises
+        ]);
+    }
+
     public function workout($id = null)
     {
         if ($id === null) {
             throw PageNotFoundException::forPageNotFound();
         }
 
+        $userId = auth()->id();
         $workoutModel = new StrengthWorkoutModel();
         
-        // Chercher par ID Strava ou ID local
-        $workout = $workoutModel->where('strava_activity_id', $id)->first();
+        // Vérification renforcée pour s'assurer que la séance appartient bien à l'utilisateur
+        $workout = $workoutModel->where('strava_activity_id', $id)->where('user_id', $userId)->first();
         if (!$workout && is_numeric($id)) {
-            $workout = $workoutModel->find((int)$id);
+            $workout = $workoutModel->where('id', (int)$id)->where('user_id', $userId)->first();
         }
 
-        // Si la séance n'existe pas en base locale, on simule la page avec les données Strava
         if (!$workout) {
             $activityModel = new ActivityModel();
-            $stravaActivity = $activityModel->where('strava_activity_id', $id)->first();
+            $stravaActivity = $activityModel->where('strava_activity_id', $id)->where('user_id', $userId)->first();
 
             if (!$stravaActivity) {
                 throw PageNotFoundException::forPageNotFound();
             }
 
             $workout = [
-                'id'                 => null, // Pas encore d'ID local
+                'id'                 => null, 
                 'strava_activity_id' => $stravaActivity['strava_activity_id'],
                 'date'               => $stravaActivity['started_at'],
                 'notes'              => ''
@@ -46,7 +56,6 @@ class Strength extends BaseController
             $rawSets = $setModel->getWorkoutDetails((int)$workout['id']);
         }
 
-        // Grouper les séries par exercice pour un affichage propre
         $exercises = [];
         $totalVolume = 0;
         
@@ -78,6 +87,7 @@ class Strength extends BaseController
             throw PageNotFoundException::forPageNotFound();
         }
 
+        $userId = auth()->id();
         $db = \Config\Database::connect();
         $exercise = $db->table('exercises')->where('id', (int)$id)->get()->getRowArray();
 
@@ -86,7 +96,8 @@ class Strength extends BaseController
         }
 
         $setModel = new WorkoutSetModel();
-        $evolution = $setModel->getExerciseEvolution((int)$id);
+        // Modification ICI : On filtre sur l'utilisateur
+        $evolution = $setModel->getExerciseEvolution($userId, (int)$id);
 
         return view('strength/exercise', [
             'title'         => 'Progression : ' . $exercise['name'],
@@ -116,6 +127,7 @@ class Strength extends BaseController
 
     public function save()
     {
+        $userId = auth()->id();
         $date = $this->request->getPost('date');
         $notes = $this->request->getPost('notes');
         $stravaId = $this->request->getPost('strava_id');
@@ -123,9 +135,10 @@ class Strength extends BaseController
         
         $workoutModel = new StrengthWorkoutModel();
         
-        // S'il n'y a pas d'ID local, on crée la séance et on la lie à Strava
+        // CORRECTION ICI : On insère l'ID de l'utilisateur connecté
         if (empty($workoutId)) {
             $workoutId = $workoutModel->insert([
+                'user_id'            => $userId,
                 'strava_activity_id' => $stravaId ?: null,
                 'date'               => $date . ' 12:00:00', 
                 'notes'              => $notes ?: 'Séance saisie manuellement'
