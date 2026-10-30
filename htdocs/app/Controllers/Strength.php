@@ -68,4 +68,57 @@ class Strength extends BaseController
             'evolutionData' => $evolution
         ]);
     }
+
+    // NOUVEAU : Affiche le formulaire pour ajouter du poids
+    public function form()
+    {
+        $date = $this->request->getGet('date') ?? date('Y-m-d');
+        $name = $this->request->getGet('name') ?? 'Nouvelle séance';
+
+        $db = \Config\Database::connect();
+        $exercises = $db->table('exercises')->get()->getResultArray();
+
+        return view('strength/form', [
+            'title' => 'Renseigner : ' . $name,
+            'date' => $date,
+            'exercises' => $exercises
+        ]);
+    }
+
+    // NOUVEAU : Sauvegarde les données du formulaire
+    public function save()
+    {
+        $date = $this->request->getPost('date');
+        $notes = $this->request->getPost('notes');
+        
+        $workoutModel = new StrengthWorkoutModel();
+        
+        // On crée la session locale
+        $workoutId = $workoutModel->insert([
+            'date' => $date . ' 12:00:00', 
+            'notes' => $notes ?: 'Séance importée de Strava'
+        ]);
+        
+        $exerciseId = $this->request->getPost('exercise_id');
+        $weight = $this->request->getPost('weight');
+        $reps = $this->request->getPost('reps');
+        $setsCount = $this->request->getPost('sets');
+
+        if ($workoutId && $exerciseId && $weight !== null) {
+            $setModel = new WorkoutSetModel();
+            
+            // On insère le nombre de séries demandées
+            for ($i = 1; $i <= $setsCount; $i++) {
+                $setModel->insert([
+                    'workout_id'  => $workoutId,
+                    'exercise_id' => $exerciseId,
+                    'set_number'  => $i,
+                    'reps'        => $reps,
+                    'weight'      => $weight
+                ]);
+            }
+        }
+
+        return redirect()->to('/')->with('success', 'Séance de musculation enregistrée avec succès !');
+    }
 }

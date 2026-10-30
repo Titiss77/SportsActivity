@@ -12,35 +12,41 @@ class Dashboard extends BaseController
         $strengthModel = new WorkoutSetModel();
         $workoutModel  = new StrengthWorkoutModel();
 
+        // Récupérer les 30 dernières activités pour Strava
         $recentActivities = $activityModel->getRecent(30);
         
         $activitiesBySport = [];
         $recentWorkouts = []; 
-        $tonnageData = $strengthModel->getTotalVolumePerWorkout();
+        $tonnageData = $strengthModel->getTotalVolumePerWorkout(); 
         
         $tonnageByDate = [];
         foreach ($tonnageData as $t) {
             $tonnageByDate[$t['workout_date']] = $t['total_volume_kg'];
         }
-
+        
         foreach ($recentActivities as $act) {
             $sport = $act['sport'] ?: 'Autre';
+            
+            // Extraction des données Premium
             $act['premium'] = json_decode($act['raw_data'], true);
             
+            // Séparation de la Musculation
             if ($sport === 'WeightTraining') {
                 $dateKey = date('Y-m-d', strtotime($act['started_at']));
                 $act['local_volume'] = $tonnageByDate[$dateKey] ?? null;
-                
                 $recentWorkouts[] = $act;
                 continue; 
             } 
             
+            // Traduction des sports
             if ($sport === 'Ride' || $sport === 'VirtualRide') {
                 $sport = 'Vélo';
             } elseif ($sport === 'Run') {
                 $sport = 'Course à pied';
             } elseif ($sport === 'Swim') {
                 $sport = 'Natation';
+            } elseif ($sport === 'Walk') {
+                $sport = 'Marche';
             }
 
             $activitiesBySport[$sport][] = $act;

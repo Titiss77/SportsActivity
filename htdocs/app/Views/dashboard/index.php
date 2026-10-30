@@ -32,6 +32,8 @@ if (!function_exists('formatTime')) {
         .bg-strava:hover { background-color: #e34301; color: white; }
         .list-group-item { border-color: #f1f3f5; }
         .section-title { color: #198754; font-weight: 700; display: flex; align-items: center; gap: 8px; }
+        .btn-tonnage { transition: all 0.2s; cursor: pointer; }
+        .btn-tonnage:hover { background-color: #0d6efd !important; color: white !important; border-color: #0d6efd !important; }
     </style>
 </head>
 <body>
@@ -97,11 +99,15 @@ if (!function_exists('formatTime')) {
                                     if ($sportName === 'Ride' || $sportName === 'VirtualRide') $sportName = 'Vélo';
                                     elseif ($sportName === 'Run') $sportName = 'Course à pied';
                                     elseif ($sportName === 'Swim') $sportName = 'Natation';
+                                    elseif ($sportName === 'Walk') $sportName = 'Marche';
 
-                                    $goalDist = $monthStat['sport'] === 'Ride' ? 300000 : ($monthStat['sport'] === 'Run' ? 60000 : 20000); 
+                                    $goalDist = 20000; // Par défaut
+                                    if ($sportName === 'Vélo') $goalDist = 300000;
+                                    if ($sportName === 'Course à pied') $goalDist = 60000;
+
                                     $progress = min(100, ($monthStat['total_distance'] / $goalDist) * 100);
                                 ?>
-                                <div class="col-12 col-md-4">
+                                <div class="col-12 col-md-6 col-xl-3">
                                     <div class="d-flex justify-content-between mb-1">
                                         <span class="fw-semibold small text-uppercase"><?= esc($sportName) ?></span>
                                         <span class="small fw-bold"><?= formatDist($monthStat['total_distance']) ?> / <?= formatDist($goalDist) ?></span>
@@ -139,9 +145,9 @@ if (!function_exists('formatTime')) {
                                                     <span class="text-muted"><?= date('d/m/Y', strtotime($activity['started_at'])) ?></span>
                                                     <span class="fw-bold text-dark"><?= formatDist($activity['distance_meters']) ?></span>
                                                 </div>
-                                                <div class="d-flex gap-2 mt-2">
+                                                <div class="d-flex flex-wrap gap-2 mt-2">
                                                     <?php if (isset($activity['premium']['suffer_score'])): ?>
-                                                        <span class="badge bg-danger text-white rounded-pill" title="Effort Relatif">🔥 <?= esc($activity['premium']['suffer_score']) ?></span>
+                                                        <span class="badge bg-danger text-white rounded-pill">🔥 <?= esc($activity['premium']['suffer_score']) ?></span>
                                                     <?php endif; ?>
                                                     <?php if (isset($activity['premium']['average_watts']) && $activity['premium']['average_watts'] > 0): ?>
                                                         <span class="badge bg-warning text-dark rounded-pill">⚡ <?= round($activity['premium']['average_watts']) ?> W</span>
@@ -160,6 +166,7 @@ if (!function_exists('formatTime')) {
                 </div>
             </div>
 
+            <!-- Graphique Cardio -->
             <div class="col-12 col-xl-5">
                 <div class="card h-100">
                     <div class="card-body">
@@ -202,23 +209,28 @@ if (!function_exists('formatTime')) {
                         <?php else: ?>
                             <div class="list-group list-group-flush">
                                 <?php foreach ($recentWorkouts as $workout): ?>
-                                    <div class="list-group-item d-flex justify-content-between align-items-center">
-                                        <div style="width: 100%;">
-                                            <div class="fw-semibold text-success text-truncate"><?= esc($workout['name']) ?></div>
-                                            <div class="d-flex justify-content-between small text-muted mt-1">
-                                                <span><?= date('d/m/Y', strtotime($workout['started_at'])) ?></span>
-                                                <span class="fw-bold"><?= formatTime($workout['duration_seconds']) ?></span>
-                                            </div>
-                                            <div class="d-flex gap-2 mt-2">
-                                                <?php if (isset($workout['premium']['suffer_score'])): ?>
-                                                    <span class="badge bg-danger text-white rounded-pill" title="Effort Relatif">🔥 <?= esc($workout['premium']['suffer_score']) ?></span>
-                                                <?php endif; ?>
-                                                <?php if (isset($workout['local_volume'])): ?>
-                                                    <span class="badge bg-success text-white rounded-pill" title="Tonnage Local">🏋️‍♂️ <?= number_format($workout['local_volume'], 0, ',', ' ') ?> kg</span>
-                                                <?php else: ?>
-                                                    <span class="badge bg-light text-secondary border rounded-pill">0 kg (à renseigner)</span>
-                                                <?php endif; ?>
-                                            </div>
+                                    <?php $wDate = date('Y-m-d', strtotime($workout['started_at'])); ?>
+                                    <div class="list-group-item py-3">
+                                        <div class="d-flex justify-content-between align-items-start mb-2">
+                                            <div class="fw-semibold text-success text-truncate pe-2" style="max-width: 80%;"><?= esc($workout['name']) ?></div>
+                                            <span class="small fw-bold text-dark text-nowrap"><?= formatTime($workout['duration_seconds']) ?></span>
+                                        </div>
+                                        <div class="d-flex align-items-center gap-2 small">
+                                            <span class="text-muted pe-2 border-end"><?= date('d/m/Y', strtotime($workout['started_at'])) ?></span>
+                                            
+                                            <?php if (isset($workout['premium']['suffer_score'])): ?>
+                                                <span class="badge bg-danger text-white rounded-pill">🔥 <?= esc($workout['premium']['suffer_score']) ?></span>
+                                            <?php endif; ?>
+                                            
+                                            <?php if (isset($workout['local_volume'])): ?>
+                                                <a href="<?= site_url('workout/' . $workout['id']) ?>" class="text-decoration-none">
+                                                    <span class="badge bg-success text-white rounded-pill btn-tonnage">🏋️‍♂️ <?= number_format($workout['local_volume'], 0, ',', ' ') ?> kg</span>
+                                                </a>
+                                            <?php else: ?>
+                                                <a href="<?= site_url('strength/form?date=' . $wDate . '&name=' . urlencode($workout['name'])) ?>" class="text-decoration-none">
+                                                    <span class="badge bg-light text-primary border border-primary rounded-pill btn-tonnage">➕ Renseigner (0 kg)</span>
+                                                </a>
+                                            <?php endif; ?>
                                         </div>
                                     </div>
                                 <?php endforeach ?>
@@ -235,10 +247,7 @@ if (!function_exists('formatTime')) {
     Chart.defaults.maintainAspectRatio = false;
 
     <?php 
-    $filteredDistance = array_filter($monthlyDistance ?? [], function($d) {
-        return true; 
-    });
-    
+    $filteredDistance = array_filter($monthlyDistance ?? [], function($d) { return true; });
     if (!empty($filteredDistance)): ?>
         const monthlyLabels = <?= json_encode(array_column($filteredDistance, 'month_key')) ?>;
         const monthlyValues = <?= json_encode(array_map(static fn($row) => round(((float) $row['distance_meters']) / 1000, 2), $filteredDistance)) ?>;
