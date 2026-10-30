@@ -22,7 +22,7 @@ if (!function_exists('formatTime')) {
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <style>
         body { background: #f4f6f8; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif; }
-        .card { border-radius: 8px; border: 1px solid #e9ecef; box-shadow: 0 1px 3px rgba(0,0,0,0.02); }
+        .card { border-radius: 12px; border: 1px solid #e9ecef; box-shadow: 0 1px 3px rgba(0,0,0,0.02); }
         .card-header { background-color: #fff; border-bottom: 1px solid #e9ecef; }
         .text-strava { color: #fc4c02; }
         .bg-strava { background-color: #fc4c02; color: white; border-color: #fc4c02; }
@@ -173,27 +173,14 @@ if (!function_exists('formatTime')) {
                 </div>
             </div>
 
-            <!-- TABLEAU DES DISTANCES AU LIEU DU GRAPHE -->
+            <!-- GRAPHIQUE DE STYLE STRAVA (COURBE ORANGE AVEC DÉGRADÉ) -->
             <div class="col-12 col-xl-6">
                 <div class="card h-100">
                     <div class="card-body">
-                        <h3 class="h6 fw-bold mb-3 text-muted">Statistiques Globales</h3>
-                        <table class="table table-sm table-striped">
-                            <thead>
-                                <tr>
-                                    <th class="condensed-text text-muted">Mois</th>
-                                    <th class="condensed-text text-muted text-end">Distance (km)</th>
-                                </tr>
-                            </thead>
-                            <tbody>
-                                <?php foreach (array_filter($monthlyDistance ?? []) as $month): ?>
-                                <tr>
-                                    <td class="fw-semibold condensed-text"><?= esc($month['month_key']) ?></td>
-                                    <td class="text-end fw-bold text-strava condensed-text"><?= number_format($month['distance_meters'] / 1000, 2, ',', ' ') ?> km</td>
-                                </tr>
-                                <?php endforeach; ?>
-                            </tbody>
-                        </table>
+                        <h3 class="h6 fw-bold mb-3 text-muted">Activité globale (Derniers mois)</h3>
+                        <div style="height: 250px; position: relative;">
+                            <canvas id="stravaStyleChart"></canvas>
+                        </div>
                     </div>
                 </div>
             </div>
@@ -210,7 +197,7 @@ if (!function_exists('formatTime')) {
                     <div class="card-body">
                         <h3 class="h6 fw-bold mb-3 text-muted">Évolution du Tonnage</h3>
                         <?php if (empty($tonnageData)): ?>
-                            <p class="text-muted small">Aucune donnée de tonnage. Cliquez sur une séance pour ajouter vos charges et générer le graphique.</p>
+                            <p class="text-muted small">Aucune donnée de tonnage.</p>
                         <?php else: ?>
                             <div style="height: 250px;">
                                 <canvas id="tonnageChart"></canvas>
@@ -232,9 +219,8 @@ if (!function_exists('formatTime')) {
                             <div class="list-group list-group-flush">
                                 <?php foreach ($recentWorkouts as $workout): ?>
                                     <?php 
-                                        $wDate = date('Y-m-d', strtotime($workout['started_at'])); 
                                         $stravaId = $workout['strava_activity_id'];
-                                        $workoutId = $workout['local_workout_id'] ?? $stravaId; // Lien cliquable par défaut vers Strava ID si non lié
+                                        $workoutId = $workout['local_workout_id'] ?? $stravaId;
                                     ?>
                                     <div class="list-group-item py-2">
                                         <div class="d-flex justify-content-between align-items-start mb-1">
@@ -245,10 +231,6 @@ if (!function_exists('formatTime')) {
                                         </div>
                                         <div class="d-flex align-items-center gap-2 condensed-text">
                                             <span class="text-muted pe-2 border-end"><?= date('d/m', strtotime($workout['started_at'])) ?></span>
-                                            
-                                            <?php if (isset($workout['premium']['suffer_score'])): ?>
-                                                <span class="badge bg-danger text-white rounded-pill" style="font-size:0.75rem;">🔥 <?= esc($workout['premium']['suffer_score']) ?></span>
-                                            <?php endif; ?>
                                             
                                             <?php if (isset($workout['local_volume'])): ?>
                                                 <span class="badge bg-success text-white rounded-pill" style="font-size:0.75rem;">🏋️‍♂️ <?= number_format($workout['local_volume'], 0, ',', ' ') ?> kg</span>
@@ -269,14 +251,70 @@ if (!function_exists('formatTime')) {
 
 <script>
     Chart.defaults.maintainAspectRatio = false;
-    
+
+    // 1. Graphique style Strava (Courbe orange avec gradient de remplissage)
+    <?php if (!empty($monthlyDistance)): ?>
+        const monthlyLabels = <?= json_encode(array_column($monthlyDistance, 'month_key')) ?>;
+        const monthlyValues = <?= json_encode(array_map(static fn($row) => round(((float) $row['distance_meters']) / 1000, 2), $monthlyDistance)) ?>;
+
+        const ctx = document.getElementById('stravaStyleChart').getContext('2d');
+        const gradient = ctx.createLinearGradient(0, 0, 0, 250);
+        gradient.addColorStop(0, 'rgba(252, 76, 2, 0.4)'); // Orange Strava transparent en haut
+        gradient.addColorStop(1, 'rgba(252, 76, 2, 0.0)'); // Totalement transparent en bas
+
+        new Chart(ctx, {
+            type: 'line',
+            data: {
+                labels: monthlyLabels,
+                datasets: [{
+                    data: monthlyValues,
+                    borderColor: '#fc4c02', // Orange Strava
+                    backgroundColor: gradient,
+                    borderWidth: 3,
+                    fill: true,
+                    tension: 0.35, // Effet arrondi lissé comme sur l'app Strava
+                    pointBackgroundColor: '#fc4c02',
+                    pointBorderColor: '#ffffff',
+                    pointBorderWidth: 2,
+                    pointRadius: 5,
+                    pointHoverRadius: 7
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                scales: {
+                    y: {
+                        beginAtZero: true,
+                        grid: { color: '#f1f3f5' },
+                        ticks: { font: { size: 11 } }
+                    },
+                    x: {
+                        grid: { display: false },
+                        ticks: { font: { size: 11 } }
+                    }
+                },
+                plugins: {
+                    legend: { display: false },
+                    tooltip: {
+                        callbacks: {
+                            label: function(context) {
+                                return context.parsed.y + ' km';
+                            }
+                        }
+                    }
+                }
+            }
+        });
+    <?php endif ?>
+
+    // 2. Graphique Tonnage Musculation
     <?php if (!empty($tonnageData)): ?>
         const tonnageLabels = <?= json_encode(array_column($tonnageData, 'workout_date')) ?>;
         const tonnageValues = <?= json_encode(array_column($tonnageData, 'total_volume_kg')) ?>;
         
-        // Calcul pour empêcher l'axe de s'étendre à l'infini
-        const maxValue = Math.max(...tonnageValues);
-        const suggestedMax = maxValue > 0 ? maxValue * 1.2 : 100;
+        const maxTon = Math.max(...tonnageValues);
+        const suggestedMaxTon = maxTon > 0 ? maxTon * 1.2 : 100;
 
         new Chart(document.getElementById('tonnageChart'), {
             type: 'line',
@@ -288,16 +326,19 @@ if (!function_exists('formatTime')) {
                     backgroundColor: 'rgba(25, 135, 84, 0.1)', 
                     fill: true, 
                     tension: 0.3,
-                    maxBarThickness: 40 // Sécurité supplémentaire
+                    pointBackgroundColor: '#198754',
+                    pointBorderColor: '#ffffff',
+                    pointBorderWidth: 2,
+                    pointRadius: 4
                 }] 
             },
             options: { 
                 responsive: true, 
                 scales: { 
                     y: { 
-                        beginAtZero: true,
-                        suggestedMax: suggestedMax, // Empêche l'axe de croître indéfiniment
-                        grid: { color: '#f1f3f5' }
+                        beginAtZero: true, 
+                        suggestedMax: suggestedMaxTon,
+                        grid: { color: '#f1f3f5' } 
                     }, 
                     x: { grid: { display: false } } 
                 }, 
