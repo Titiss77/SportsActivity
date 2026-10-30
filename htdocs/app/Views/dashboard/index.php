@@ -91,7 +91,6 @@ if (!function_exists('formatTime')) {
                         <div class="row g-4">
                             <?php foreach ($currentMonthStats as $monthStat): ?>
                                 <?php 
-                                    // Ignorer la musculation dans les objectifs cardio
                                     if ($monthStat['sport'] === 'WeightTraining') continue;
 
                                     $sportName = $monthStat['sport'];
@@ -161,7 +160,6 @@ if (!function_exists('formatTime')) {
                 </div>
             </div>
 
-            <!-- Graphique Cardio -->
             <div class="col-12 col-xl-5">
                 <div class="card h-100">
                     <div class="card-body">
@@ -204,7 +202,6 @@ if (!function_exists('formatTime')) {
                         <?php else: ?>
                             <div class="list-group list-group-flush">
                                 <?php foreach ($recentWorkouts as $workout): ?>
-                                    <!-- Si vous aviez un contrôleur de détail de séance Strava, mettez son URL ici -->
                                     <div class="list-group-item d-flex justify-content-between align-items-center">
                                         <div style="width: 100%;">
                                             <div class="fw-semibold text-success text-truncate"><?= esc($workout['name']) ?></div>
@@ -212,11 +209,16 @@ if (!function_exists('formatTime')) {
                                                 <span><?= date('d/m/Y', strtotime($workout['started_at'])) ?></span>
                                                 <span class="fw-bold"><?= formatTime($workout['duration_seconds']) ?></span>
                                             </div>
-                                            <?php if (isset($workout['premium']['suffer_score'])): ?>
-                                                <div class="mt-2">
+                                            <div class="d-flex gap-2 mt-2">
+                                                <?php if (isset($workout['premium']['suffer_score'])): ?>
                                                     <span class="badge bg-danger text-white rounded-pill" title="Effort Relatif">🔥 <?= esc($workout['premium']['suffer_score']) ?></span>
-                                                </div>
-                                            <?php endif; ?>
+                                                <?php endif; ?>
+                                                <?php if (isset($workout['local_volume'])): ?>
+                                                    <span class="badge bg-success text-white rounded-pill" title="Tonnage Local">🏋️‍♂️ <?= number_format($workout['local_volume'], 0, ',', ' ') ?> kg</span>
+                                                <?php else: ?>
+                                                    <span class="badge bg-light text-secondary border rounded-pill">0 kg (à renseigner)</span>
+                                                <?php endif; ?>
+                                            </div>
                                         </div>
                                     </div>
                                 <?php endforeach ?>
@@ -227,19 +229,13 @@ if (!function_exists('formatTime')) {
             </div>
         </div>
     </div>
-
 </main>
 
 <script>
-    // Configuration de base pour éviter l'effet "bloc infini"
     Chart.defaults.maintainAspectRatio = false;
 
-    // Graphique Distance
     <?php 
-    // On ne garde que les sports non-musculation pour ce graphique
     $filteredDistance = array_filter($monthlyDistance ?? [], function($d) {
-        // En base de données, la requête mensuelle agrège toutes les distances, 
-        // cela inclut 0m pour la muscu, ce qui ne fausse pas les totaux kilométriques.
         return true; 
     });
     
@@ -254,7 +250,7 @@ if (!function_exists('formatTime')) {
                     label: 'Distance (km)',
                     data: monthlyValues, 
                     backgroundColor: '#fc4c02',
-                    maxBarThickness: 40 // Force une largeur raisonnable
+                    maxBarThickness: 40 
                 }] 
             },
             options: { 
@@ -268,7 +264,6 @@ if (!function_exists('formatTime')) {
         });
     <?php endif ?>
 
-    // Graphique Tonnage
     <?php if (!empty($tonnageData)): ?>
         const tonnageLabels = <?= json_encode(array_column($tonnageData, 'workout_date')) ?>;
         const tonnageValues = <?= json_encode(array_column($tonnageData, 'total_volume_kg')) ?>;

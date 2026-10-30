@@ -2,6 +2,7 @@
 
 use App\Models\ActivityModel;
 use App\Models\WorkoutSetModel;
+use App\Models\StrengthWorkoutModel;
 
 class Dashboard extends BaseController
 {
@@ -9,24 +10,29 @@ class Dashboard extends BaseController
     {
         $activityModel = new ActivityModel();
         $strengthModel = new WorkoutSetModel();
+        $workoutModel  = new StrengthWorkoutModel();
 
-        // Récupérer les 30 dernières activités pour Strava
         $recentActivities = $activityModel->getRecent(30);
         
         $activitiesBySport = [];
-        $recentWorkouts = []; // Séances de musculation Strava (WeightTraining)
-        $tonnageData = $strengthModel->getTotalVolumePerWorkout(); // Graphique de tonnage (géré en interne)
+        $recentWorkouts = []; 
+        $tonnageData = $strengthModel->getTotalVolumePerWorkout();
         
+        $tonnageByDate = [];
+        foreach ($tonnageData as $t) {
+            $tonnageByDate[$t['workout_date']] = $t['total_volume_kg'];
+        }
+
         foreach ($recentActivities as $act) {
             $sport = $act['sport'] ?: 'Autre';
-            
-            // Extraction des données Premium
             $act['premium'] = json_decode($act['raw_data'], true);
             
-            // Traduction et séparation de la Musculation
             if ($sport === 'WeightTraining') {
+                $dateKey = date('Y-m-d', strtotime($act['started_at']));
+                $act['local_volume'] = $tonnageByDate[$dateKey] ?? null;
+                
                 $recentWorkouts[] = $act;
-                continue; // Ne pas afficher dans la section "Cardio"
+                continue; 
             } 
             
             if ($sport === 'Ride' || $sport === 'VirtualRide') {
@@ -46,9 +52,9 @@ class Dashboard extends BaseController
             'statsBySport'      => $activityModel->getStatsBySport(),
             'currentMonthStats' => $activityModel->getCurrentMonthStats(),
             'activitiesBySport' => $activitiesBySport,
-            'monthlyDistance'   => $activityModel->getMonthlyDistance(6), // Historique cardio
+            'monthlyDistance'   => $activityModel->getMonthlyDistance(6), 
             'tonnageData'       => $tonnageData,
-            'recentWorkouts'    => $recentWorkouts, // Les séances Strava 'WeightTraining' avec les vraies dates
+            'recentWorkouts'    => $recentWorkouts, 
         ];
 
         return view('dashboard/index', $data);
