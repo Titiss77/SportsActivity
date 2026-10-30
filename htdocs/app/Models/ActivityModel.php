@@ -53,7 +53,6 @@ class ActivityModel extends Model
         ];
     }
 
-    // NOUVELLE MÉTHODE : Statistiques regroupées par sport
     public function getStatsBySport(): array
     {
         $sql = "
@@ -96,5 +95,20 @@ class ActivityModel extends Model
         }
 
         return (bool) $this->insert($activity);
+    }
+
+    public function getCurrentMonthStats(): array
+    {
+        $sql = "
+            SELECT sport, 
+                   COUNT(*) as total_sessions, 
+                   COALESCE(SUM(distance_meters), 0) AS total_distance,
+                   COALESCE(SUM(duration_seconds), 0) AS total_time
+            FROM strava_activities
+            WHERE MONTH(started_at) = MONTH(CURDATE()) 
+              AND YEAR(started_at) = YEAR(CURDATE())
+            GROUP BY sport
+        ";
+        return $this->db->query($sql)->getResultArray();
     }
 }
