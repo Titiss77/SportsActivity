@@ -1,12 +1,10 @@
-<?php
-
-namespace App\Models;
+<?php namespace App\Models;
 
 use CodeIgniter\Model;
 
 class ActivityModel extends Model
 {
-    protected $table            = 'coros_activities';
+    protected $table            = 'strava_activities';
     protected $primaryKey       = 'id';
     protected $returnType       = 'array';
     protected $useAutoIncrement = true;
@@ -15,7 +13,7 @@ class ActivityModel extends Model
     protected $updatedField     = 'updated_at';
 
     protected $allowedFields = [
-        'coros_activity_id',
+        'strava_activity_id', // Mis à jour
         'name',
         'sport',
         'started_at',
@@ -39,10 +37,10 @@ class ActivityModel extends Model
     public function getStats(): array
     {
         $row = $this->select(
-            'COUNT(*) AS total_activities,
-             COALESCE(SUM(distance_meters), 0) AS total_distance_meters,
-             COALESCE(SUM(duration_seconds), 0) AS total_duration_seconds,
-             COALESCE(AVG(avg_heart_rate), 0) AS average_heart_rate,
+            'COUNT(*) AS total_activities, 
+             COALESCE(SUM(distance_meters), 0) AS total_distance_meters, 
+             COALESCE(SUM(duration_seconds), 0) AS total_duration_seconds, 
+             COALESCE(AVG(avg_heart_rate), 0) AS average_heart_rate, 
              COALESCE(AVG(elevation_gain_m), 0) AS average_elevation_gain'
         )->first();
 
@@ -59,11 +57,11 @@ class ActivityModel extends Model
     {
         $months = max(1, min($months, 24));
         $db = $this->db;
-
+        
         $sql = "
             SELECT DATE_FORMAT(started_at, '%Y-%m') AS month_key,
                    COALESCE(SUM(distance_meters), 0) AS distance_meters
-            FROM coros_activities
+            FROM strava_activities
             WHERE started_at >= DATE_SUB(CURDATE(), INTERVAL ? MONTH)
             GROUP BY DATE_FORMAT(started_at, '%Y-%m')
             ORDER BY month_key ASC
@@ -72,13 +70,13 @@ class ActivityModel extends Model
         return $db->query($sql, [$months])->getResultArray();
     }
 
-    public function upsertFromCoros(array $activity): bool
+    public function upsertFromStrava(array $activity): bool
     {
-        if (empty($activity['coros_activity_id'])) {
+        if (empty($activity['strava_activity_id'])) {
             return false;
         }
 
-        $existing = $this->where('coros_activity_id', (string) $activity['coros_activity_id'])->first();
+        $existing = $this->where('strava_activity_id', (string) $activity['strava_activity_id'])->first();
         $activity['synced_at'] = date('Y-m-d H:i:s');
 
         if ($existing) {

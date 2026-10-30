@@ -61,7 +61,6 @@ class Strava extends BaseController
 
     public function sync()
     {
-        // Vérifier si l'utilisateur est connecté à Strava
         if (!session()->has('strava_access_token')) {
             return redirect()->to('/')->with('error', 'Vous devez d\'abord connecter votre compte Strava.');
         }
@@ -73,7 +72,6 @@ class Strava extends BaseController
             return redirect()->to('/')->with('error', 'Veuillez sélectionner une plage de dates.');
         }
 
-        // Convertir les dates en timestamp UNIX (requis par l'API Strava)
         $after = strtotime($startDate . ' 00:00:00');
         $before = strtotime($endDate . ' 23:59:59');
 
@@ -86,7 +84,6 @@ class Strava extends BaseController
 
         try {
             do {
-                // Requête API Strava (pagination par 100 pour récupérer toutes les activités sur la période)
                 $response = $client->get('https://www.strava.com/api/v3/athlete/activities', [
                     'headers' => [
                         'Authorization' => 'Bearer ' . $accessToken,
@@ -101,7 +98,6 @@ class Strava extends BaseController
                 ]);
 
                 if ($response->getStatusCode() === 401) {
-                    // Si le jeton est expiré
                     session()->remove('strava_access_token');
                     return redirect()->to('/')->with('error', 'Votre session Strava a expiré. Veuillez vous reconnecter.');
                 }
@@ -117,9 +113,8 @@ class Strava extends BaseController
                 }
 
                 foreach ($activities as $stravaActivity) {
-                    // Mapping des données Strava vers votre base existante (prévue initialement pour Coros)
                     $activityData = [
-                        'coros_activity_id'       => 'STRAVA_' . $stravaActivity['id'],
+                        'strava_activity_id'      => (string) $stravaActivity['id'], // Mis à jour
                         'name'                    => $stravaActivity['name'] ?? 'Activité Strava',
                         'sport'                   => $stravaActivity['sport_type'] ?? ($stravaActivity['type'] ?? 'Inconnu'),
                         'started_at'              => date('Y-m-d H:i:s', strtotime($stravaActivity['start_date_local'])),
@@ -132,8 +127,8 @@ class Strava extends BaseController
                         'raw_data'                => json_encode($stravaActivity)
                     ];
 
-                    // Sauvegarde dans la base de données
-                    if ($activityModel->upsertFromCoros($activityData)) {
+                    // Mis à jour
+                    if ($activityModel->upsertFromStrava($activityData)) {
                         $importedCount++;
                     }
                 }
