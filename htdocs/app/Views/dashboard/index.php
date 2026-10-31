@@ -91,13 +91,6 @@ if (!function_exists('formatTime')) {
     <?php endif; ?>
 
     <?php if (empty($activitiesBySport)): ?>
-                        <div class="col-12">
-                            <div class="card h-100 shadow-sm border-0">
-                                <div class="card-body d-flex justify-content-center align-items-center" style="height: 250px;">
-                                    <p class="text-muted text-center small">Aucune activité Strava récente.</p>
-                                </div>
-                            </div>
-                        </div>
                     <?php else: ?>
     <!-- SECTION 1 : CARDIO & ENDURANCE (STRAVA) -->
     <div class="mb-5">
@@ -203,7 +196,10 @@ if (!function_exists('formatTime')) {
             </div>
         </div>
     </div>
+    <?php endif; ?>
 
+    <?php if (empty($recentWorkouts)): ?>
+                        <?php else: ?>
     <!-- Section Musculation -->
     <div class="mb-5">
         <h2 class="h4 border-bottom pb-2 mb-4 section-title">🏋️‍♂️ Renforcement & Musculation</h2>
@@ -227,9 +223,6 @@ if (!function_exists('formatTime')) {
                         <div class="p-3 pb-2 border-bottom">
                             <h3 class="h6 fw-bold mb-0 text-muted">Séances de force récentes</h3>
                         </div>
-                        <?php if (empty($recentWorkouts)): ?>
-                            <p class="text-muted small p-3">Aucune séance.</p>
-                        <?php else: ?>
                             <div class="list-group list-group-flush">
                                 <?php foreach ($recentWorkouts as $workout): ?>
                                     <?php 
@@ -254,13 +247,12 @@ if (!function_exists('formatTime')) {
                                     </div>
                                 <?php endforeach ?>
                             </div>
-                        <?php endif ?>
                     </div>
                 </div>
             </div>
         </div>
     </div>
-    <?php endif; ?>
+    <?php endif ?>
 </main>
 
 <script>
