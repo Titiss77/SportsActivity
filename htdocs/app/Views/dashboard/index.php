@@ -221,8 +221,7 @@ if (!function_exists('formatTime')) {
                                 <div class="card h-100 shadow-sm border-0">
                                     <div class="card-header bg-white fw-bold d-flex justify-content-between py-2">
                                         <span class="condensed-text"><?= esc($sport) ?></span>
-                                        <span class="badge bg-light text-dark border condensed-text"><?= count($acts) ?>
-                                            réc.</span>
+                                        <span class="badge bg-light text-dark border condensed-text">5 réc.</span>
                                     </div>
                                     <div class="list-group list-group-flush">
                                         <?php foreach (array_slice($acts, 0, 5) as $activity): ?>
