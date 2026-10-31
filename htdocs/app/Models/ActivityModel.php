@@ -1,4 +1,6 @@
-<?php namespace App\Models;
+<?php
+
+namespace App\Models;
 
 use CodeIgniter\Model;
 
@@ -33,7 +35,22 @@ class ActivityModel extends Model
     {
         return $this->where('user_id', $userId)
                     ->orderBy('started_at', 'DESC')
-                    ->findAll(max(1, min($limit, 100)));
+                    ->findAll(max(1, min($limit, 500)));
+    }
+
+    /**
+     * Récupère tout l'historique sur X mois complets (sans limite de 100 lignes)
+     */
+    public function getActivitiesSince(int $userId, int $months = 6): array
+    {
+        $sql = "
+            SELECT *
+            FROM strava_activities
+            WHERE user_id = ?
+              AND started_at >= DATE_FORMAT(DATE_SUB(CURDATE(), INTERVAL ? MONTH), '%Y-%m-01')
+            ORDER BY started_at DESC
+        ";
+        return $this->db->query($sql, [$userId, $months])->getResultArray();
     }
 
     public function getStatsBySport(int $userId): array
@@ -52,21 +69,21 @@ class ActivityModel extends Model
     }
 
     public function getMonthlyDistance(int $userId, int $months = 6): array
-{
-    $months = 6; // Limite à 6 mois pour éviter des requêtes trop lourdes
-    $sql = "
-        SELECT DATE_FORMAT(started_at, '%Y-%m') AS month_key,
-               COALESCE(SUM(distance_meters), 0) AS distance_meters
-        FROM strava_activities
-        WHERE user_id = ? 
-          AND sport != 'WeightTraining'
-          AND distance_meters > 0
-          AND started_at >= DATE_SUB(CURDATE(), INTERVAL ? MONTH)
-        GROUP BY DATE_FORMAT(started_at, '%Y-%m')
-        ORDER BY month_key ASC
-    ";
-    return $this->db->query($sql, [$userId, $months])->getResultArray();
-}
+    {
+        $months = max(1, min($months, 24));
+        // DATE_FORMAT(..., '%Y-%m-01') permet de prendre le mois d'avril dès le 1er avril !
+        $sql = "
+            SELECT DATE_FORMAT(started_at, '%Y-%m') AS month_key,
+                   COALESCE(SUM(distance_meters), 0) AS distance_meters
+            FROM strava_activities
+            WHERE user_id = ? 
+              AND sport NOT IN ('WeightTraining', 'Workout')
+              AND started_at >= DATE_FORMAT(DATE_SUB(CURDATE(), INTERVAL ? MONTH), '%Y-%m-01')
+            GROUP BY DATE_FORMAT(started_at, '%Y-%m')
+            ORDER BY month_key ASC
+        ";
+        return $this->db->query($sql, [$userId, $months])->getResultArray();
+    }
 
     public function upsertFromStrava(array $activity): bool
     {

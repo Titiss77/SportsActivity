@@ -1,4 +1,6 @@
-<?php namespace App\Models;
+<?php
+
+namespace App\Models;
 
 use CodeIgniter\Model;
 
@@ -18,33 +20,36 @@ class WorkoutSetModel extends Model
     ];
 
     public function getTotalVolumePerUser(int $userId): array
-{
-    $sql = "
-        SELECT 
-            DATE_FORMAT(sw.date, '%Y-%m-%d') as workout_date,
-            SUM(ws.reps * ws.weight) as total_volume_kg
-        FROM strength_workouts sw
-        JOIN workout_sets ws ON sw.id = ws.workout_id
-        WHERE sw.user_id = ?
-        GROUP BY DATE_FORMAT(sw.date, '%Y-%m-%d')
-        ORDER BY sw.date ASC
-    ";
-            
-    return $this->db->query($sql, [$userId])->getResultArray();
-}
+    {
+        $sql = "
+            SELECT 
+                DATE_FORMAT(COALESCE(sa.started_at, sw.date), '%Y-%m-%d') as workout_date,
+                SUM(ws.reps * ws.weight) as total_volume_kg
+            FROM strength_workouts sw
+            JOIN workout_sets ws ON sw.id = ws.workout_id
+            LEFT JOIN strava_activities sa 
+                   ON sw.strava_activity_id = sa.strava_activity_id AND sa.user_id = sw.user_id
+            WHERE sw.user_id = ?
+            GROUP BY workout_date
+            ORDER BY workout_date ASC
+        ";
+        
+        return $this->db->query($sql, [$userId])->getResultArray();
+    }
 
-    // AJOUT du userId pour ne filtrer que la progression de cet utilisateur
     public function getExerciseEvolution(int $userId, int $exerciseId): array
     {
         $sql = "
             SELECT 
-                DATE_FORMAT(sw.date, '%Y-%m-%d') as workout_date,
+                DATE_FORMAT(COALESCE(sa.started_at, sw.date), '%Y-%m-%d') as workout_date,
                 MAX(ws.weight) as max_weight_lifted
             FROM strength_workouts sw
             JOIN workout_sets ws ON sw.id = ws.workout_id
+            LEFT JOIN strava_activities sa 
+                   ON sw.strava_activity_id = sa.strava_activity_id AND sa.user_id = sw.user_id
             WHERE ws.exercise_id = ? AND sw.user_id = ?
-            GROUP BY sw.id
-            ORDER BY sw.date ASC
+            GROUP BY workout_date
+            ORDER BY workout_date ASC
         ";
         
         return $this->db->query($sql, [$exerciseId, $userId])->getResultArray();

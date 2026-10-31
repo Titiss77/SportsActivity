@@ -135,14 +135,42 @@ class Strength extends BaseController
         
         $workoutModel = new StrengthWorkoutModel();
         
-        // CORRECTION ICI : On insère l'ID de l'utilisateur connecté
+        // 1. Si aucun workoutId n'est passé, on vérifie si une séance existe déjà pour ce strava_id ou cette date
         if (empty($workoutId)) {
-            $workoutId = $workoutModel->insert([
-                'user_id'            => $userId,
-                'strava_activity_id' => $stravaId ?: null,
-                'date'               => $date . ' 12:00:00', 
-                'notes'              => $notes ?: 'Séance saisie manuellement'
-            ]);
+            $existingWorkout = null;
+            if (!empty($stravaId)) {
+                $existingWorkout = $workoutModel->where('user_id', $userId)
+                                                ->where('strava_activity_id', $stravaId)
+                                                ->first();
+            }
+            if (!$existingWorkout && !empty($date)) {
+                $existingWorkout = $workoutModel->where('user_id', $userId)
+                                                ->like('date', $date, 'after')
+                                                ->first();
+            }
+
+            if ($existingWorkout) {
+                $workoutId = $existingWorkout['id'];
+            } else {
+                // Récupérer la vraie date depuis strava_activities si stravaId est fourni
+                $workoutDateTime = ($date ?: date('Y-m-d')) . ' 12:00:00';
+                if (!empty($stravaId)) {
+                    $activityModel = new ActivityModel();
+                    $stravaAct = $activityModel->where('user_id', $userId)
+                                               ->where('strava_activity_id', $stravaId)
+                                               ->first();
+                    if ($stravaAct && !empty($stravaAct['started_at'])) {
+                        $workoutDateTime = $stravaAct['started_at'];
+                    }
+                }
+
+                $workoutId = $workoutModel->insert([
+                    'user_id'            => $userId,
+                    'strava_activity_id' => $stravaId ?: null,
+                    'date'               => $workoutDateTime, 
+                    'notes'              => $notes ?: 'Séance saisie manuellement'
+                ]);
+            }
         }
         
         $exerciseId = $this->request->getPost('exercise_id');
