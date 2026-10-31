@@ -47,7 +47,8 @@
                                 <td colspan="7" class="text-center py-5 text-secondary">Aucune activité enregistrée.
                                 </td>
                             </tr>
-                            <?php else: foreach ($activities as $activity): ?>
+                            <?php else:
+    foreach ($activities as $activity): ?>
                             <?php $seconds = (int) ($activity['duration_seconds'] ?? 0); ?>
                             <tr>
                                 <td><?= esc($activity['started_at'] ?: '—') ?></td>
@@ -67,7 +68,8 @@
                                 <td><?= isset($activity['elevation_gain_m']) ? number_format((float) $activity['elevation_gain_m'], 0, ',', ' ') . ' m' : '—' ?>
                                 </td>
                             </tr>
-                            <?php endforeach; endif ?>
+                            <?php endforeach;
+endif ?>
                         </tbody>
                     </table>
                 </div>
@@ -76,52 +78,62 @@
     </main>
 
 
-    <table id="myAdminTable" class="dataTable-table">
-        <thead>
-            <tr>
-                <th>Sport</th>
-                <th>Activité Totales</th>
-                <th>Distance (m)</th>
-                <th>Durée (s)</th>
-            </tr>
-        </thead>
-        <tbody>
-            <?php if (empty($activities)): ?>
-            <tr>
-                <td colspan="7" class="text-center py-5 text-secondary">Aucune activité enregistrée.
-                </td>
-            </tr>
-            <?php else: foreach ($globalStats as $global): ?>
-            <?php $count = (int) ($global['total_activities'] ?? 0); ?>
-            <?php $distance = (int) ($global['total_distance_meters'] ?? 0); ?>
-            <?php $duration = (int) ($global['total_duration_seconds'] ?? 0); ?>
-            <tr>
-                <td><?= esc($global['sport'] ?: '—') ?></td>
-                <td><?= $count ?></td>
-                <td><?= $distance ?></td>
-                <td><?= $duration ?></td>
-            </tr>
-            <?php endforeach; endif ?>
-        </tbody>
-    </table>
+    <div style="display: flex; justify-content: center;">
+        <table id="myAdminTable" class="dataTable-table">
+            <style>
+            th,
+            td {
+                padding: 0.75rem;
+                text-align: center;
+                border-bottom: 1px solid #dee2e6;
+            }
+            </style>
+            <thead>
+                <tr>
+                    <th>Sport</th>
+                    <th>Activité Totales</th>
+                    <th>Distance (m)</th>
+                    <th>Durée (s)</th>
+                </tr>
+            </thead>
+            <tbody><?php if (empty($activities)): ?><tr>
+                    <td colspan="7" class="text-center py-5 text-secondary">Aucune activité enregistrée. </td>
+                </tr><?php else: foreach ($globalStats as $global): ?><?php $count=(int) ($global['total_activities'] ?? 0);
+            ?><?php $distance=(int) ($global['total_distance_meters'] ?? 0);
+            ?><?php $duration=(int) ($global['total_duration_seconds'] ?? 0);
+            ?><tr>
+                    <td><?=esc($global['sport'] ?: '—') ?></td>
+                    <td><?=$count ?></td>
+                    <td><?=$distance ?></td>
+                    <td><?=$duration ?></td>
+                </tr><?php endforeach;
 
+            endif ?></tbody>
+        </table>
+    </div>
     <script>
     document.addEventListener("DOMContentLoaded", function() {
-        // Initialisation et traduction de Simple DataTables
-        const table = document.getElementById("myAdminTable");
-        if (table) {
-            new simpleDatatables.DataTable(table, {
-                searchable: true,
-                fixedHeight: false,
-                labels: {
-                    placeholder: "Rechercher une activité",
-                    perPage: "activités par page",
-                    noRows: "Aucune activité trouvée",
-                    info: "Affichage de {start} à {end} sur {rows} activités",
-                }
-            });
+            // Initialisation et traduction de Simple DataTables
+            const table = document.getElementById("myAdminTable");
+
+            if (table) {
+                new simpleDatatables.DataTable(table, {
+
+                        searchable: true,
+                        fixedHeight: false,
+                        labels: {
+                            placeholder: "Rechercher une activité",
+                            perPage: "activités par page",
+                            noRows: "Aucune activité trouvée",
+                            info: "Affichage de {start} à {end} sur {rows} activités",
+                        }
+                    }
+
+                );
+            }
         }
-    });
+
+    );
     </script>
 </body>
 

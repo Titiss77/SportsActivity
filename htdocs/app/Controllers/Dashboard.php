@@ -109,6 +109,7 @@ class Dashboard extends BaseController
         $userId = auth()->id();
         $activityModel = new ActivityModel();
         $activities = $activityModel->getActivitiesSince($userId);
+        $globalStats = $activityModel->getStatsBySport($userId);
         $sport = null;
 
         if (empty($activities)) {
@@ -134,9 +135,26 @@ class Dashboard extends BaseController
             }
         }
 
+        if ($globalStats) {
+            foreach ($globalStats as &$global) {
+                $sport = $global['sport'] ?: 'Autre';
+                if ($sport === 'Ride' || $sport === 'VirtualRide' || $sport === 'Bike') {
+                    $global['sport'] = 'Vélo';
+                } elseif (stripos($sport, 'Run') !== false) {
+                    $global['sport'] = 'Course à pied';
+                } elseif (stripos($sport, 'Swim') !== false || $sport === 'Open Water') {
+                    $global['sport'] = 'Natation';
+                } elseif ($sport === 'Walk' || $sport === 'Hike') {
+                    $global['sport'] = 'Marche';
+                } elseif ($sport === 'WeightTraining') {
+                    $global['sport'] = 'Musculation';
+                }
+            }
+        }
+
         $data = [
             'title'      => 'Historique des Activités',
-            'globalStats' => $activityModel->getStatsBySport($userId),
+            'globalStats' => $globalStats,
             'activities' => $activities,
         ];
 
