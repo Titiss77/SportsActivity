@@ -41,7 +41,9 @@ if (!function_exists('formatTime')) {
         <a class="navbar-brand fw-bold" href="<?= site_url('/') ?>">Tableau de Bord</a>
         <div class="d-flex flex-wrap gap-2">
             <?php if (empty($userSettings['strava_access_token'])): ?>
-                <a class="btn bg-strava btn-sm text-white fw-bold" href="<?= site_url('strava/connect') ?>">Connecter Strava</a>
+                <a href="<?= site_url('strava/connect') ?>">
+                    <img src="https://badges.strava.com/echelon-sprite-connect-with-strava.png" alt="Connect with Strava" style="height: 36px;">
+                </a>
             <?php endif; ?>
             <a class="btn btn-outline-success btn-sm" href="<?= site_url('strength') ?>">Progression Muscu</a>
             <a class="btn btn-outline-secondary btn-sm" href="<?= site_url('profile') ?>">Mon Profil (<?= esc(auth()->user()->username ?? 'User') ?>)</a>
@@ -145,7 +147,9 @@ if (!function_exists('formatTime')) {
                                     <div class="list-group list-group-flush">
                                         <?php foreach (array_slice($acts, 0, 5) as $activity): ?>
                                             <div class="list-group-item">
-                                                <div class="fw-semibold text-truncate condensed-text" style="max-width: 100%;"><?= esc($activity['name']) ?></div>
+                                            <a href="https://www.strava.com/activities/<?= esc($activity['strava_activity_id']) ?>" target="_blank" class="fw-semibold text-truncate condensed-text text-dark text-decoration-none d-block">
+                                                <?= esc($activity['name']) ?>
+                                            </a>
                                                 <div class="d-flex justify-content-between align-items-center condensed-text mt-1">
                                                     <span class="text-muted"><?= date('d/m/y', strtotime($activity['started_at'])) ?></span>
                                                     <span class="fw-bold text-dark"><?= formatDist($activity['distance_meters']) ?></span>
@@ -177,6 +181,9 @@ if (!function_exists('formatTime')) {
                         </div>
                         <div style="height: 250px; position: relative;">
                             <canvas id="stravaStyleChart"></canvas>
+                        </div>
+                        <div class="text-end mt-1">
+                            <span class=" small fw-bold" style="color: #fc4c02; font-size: 0.75rem;">POWERED BY STRAVA</span>
                         </div>
                     </div>
                 </div>
