@@ -71,7 +71,6 @@ class ActivityModel extends Model
     public function getMonthlyDistance(int $userId, int $months = 6): array
     {
         $months = max(1, min($months, 24));
-        // DATE_FORMAT(..., '%Y-%m-01') permet de prendre le mois d'avril dès le 1er avril !
         $sql = "
             SELECT DATE_FORMAT(started_at, '%Y-%m') AS month_key,
                    COALESCE(SUM(distance_meters), 0) AS distance_meters
