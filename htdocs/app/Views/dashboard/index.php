@@ -10,9 +10,17 @@ if (!function_exists('formatDist')) {
 if (!function_exists('formatTime')) {
     function formatTime($seconds)
     {
-        $h = intdiv($seconds, 3600);
-        $m = intdiv($seconds % 3600, 60);
+        $h = intdiv((int)$seconds, 3600);
+        $m = intdiv((int)$seconds % 3600, 60);
         return $h > 0 ? sprintf('%dh %02d', $h, $m) : sprintf('%d min', $m);
+    }
+}
+// AJOUT : Format d'allure pour la natation
+if (!function_exists('formatPace')) {
+    function formatPace($secPer100m) {
+        if (!$secPer100m) return '-';
+        $m = intdiv((int)$secPer100m, 60); $s = (int)$secPer100m % 60;
+        return sprintf('%02d:%02d /100m', $m, $s);
     }
 }
 ?>
@@ -84,6 +92,15 @@ if (!function_exists('formatTime')) {
     .condensed-text {
         font-size: 0.85rem;
     }
+
+    /* AJOUT : Style pour le badge Readiness */
+    .readiness-badge {
+        font-size: 1.25rem;
+        font-weight: bold;
+        padding: 10px 15px;
+        border-radius: 8px;
+        color: white;
+    }
     </style>
 </head>
 
@@ -124,7 +141,7 @@ if (!function_exists('formatTime')) {
 
         <?php if (!empty($userSettings['strava_access_token'])): ?>
         <div class="card mb-4 border-0 bg-light">
-            <div class="card-body py-2">
+            <div class="card-body py-2 d-flex flex-wrap justify-content-between align-items-center">
                 <form method="post" action="<?= site_url('strava/sync') ?>"
                     class="d-flex flex-wrap gap-2 align-items-end">
                     <?= csrf_field() ?>
@@ -140,6 +157,18 @@ if (!function_exists('formatTime')) {
                     </div>
                     <div><button class="btn btn-sm bg-strava" type="submit">Importer</button></div>
                 </form>
+
+                <!-- AJOUT : Badge Readiness Score -->
+                <div class="d-flex align-items-center mt-3 mt-md-0">
+                    <div class="text-end me-3">
+                        <span class="d-block fw-bold text-dark mb-0">Score d'Énergie</span>
+                        <small class="text-muted condensed-text">Charge des 7 derniers jours</small>
+                    </div>
+                    <?php $colorScore = $readinessScore > 70 ? '#198754' : ($readinessScore > 40 ? '#fd7e14' : '#dc3545'); ?>
+                    <div class="readiness-badge shadow-sm" style="background-color: <?= $colorScore ?>;">
+                        <?= $readinessScore ?> / 100
+                    </div>
+                </div>
             </div>
         </div>
         <?php else: ?>
@@ -155,6 +184,7 @@ if (!function_exists('formatTime')) {
             statistiques ici.
         </div>
         <?php else: ?>
+
         <?php if (!empty($activitiesBySport)): ?>
         <!-- SECTION 1 : CARDIO & ENDURANCE (STRAVA) -->
         <div class="mb-5">
@@ -206,6 +236,8 @@ if (!function_exists('formatTime')) {
                     </div>
                 </div>
             </div>
+
+            <!-- Listes et Graphique global Strava -->
             <div class="row g-4">
                 <div class="col-12 col-xl-6">
                     <div class="row g-2">
@@ -240,13 +272,11 @@ if (!function_exists('formatTime')) {
                     </div>
                 </div>
 
-                <!-- GRAPHIQUE STRAVA AVEC FILTRE PAR SPORT -->
                 <div class="col-12 col-xl-6">
                     <div class="card h-100">
                         <div class="card-body">
                             <div class="d-flex justify-content-between align-items-center mb-3">
                                 <h3 class="h6 fw-bold mb-0 text-muted">Progression des Activités</h3>
-                                <!-- Sélecteur de sport (Style Strava) -->
                                 <select id="sportFilter"
                                     class="form-select form-select-sm w-auto fw-semibold text-strava border-strava"
                                     onchange="updateStravaChart()">
@@ -267,6 +297,57 @@ if (!function_exists('formatTime')) {
                     </div>
                 </div>
             </div>
+
+            <!-- AJOUT : Zones de fréquence cardiaque & Natation -->
+            <div class="row g-4 mt-1">
+                <!-- Zones Cardio -->
+                <?php if (!empty($hrZones) && array_sum($hrZones) > 0): ?>
+                <div class="col-12 col-xl-6">
+                    <div class="card h-100 shadow-sm border-0">
+                        <div class="card-body">
+                            <h3 class="h6 fw-bold mb-1 text-muted">Distribution FC (30 derniers jours)</h3>
+                            <small class="text-muted d-block mb-3">Volume par zone de fréquence cardiaque</small>
+                            <div style="height: 200px; position: relative;"><canvas id="hrZonesChart"></canvas></div>
+                        </div>
+                    </div>
+                </div>
+                <?php endif; ?>
+
+                <!-- Tableau Natation (si pertinent) -->
+                <?php if (!empty($swimMetrics)): ?>
+                <div class="col-12 col-xl-6">
+                    <div class="card h-100 shadow-sm border-0">
+                        <div class="card-body p-0">
+                            <div class="p-3 pb-2 border-bottom">
+                                <h3 class="h6 fw-bold mb-0 text-muted" style="color: #0dcaf0 !important;">Focus Natation
+                                </h3>
+                            </div>
+                            <table class="table table-hover mb-0 text-center align-middle condensed-text">
+                                <thead class="table-light">
+                                    <tr>
+                                        <th class="text-start ps-3">Date</th>
+                                        <th>Distance</th>
+                                        <th>Allure /100m</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    <?php foreach ($swimMetrics as $swim): ?>
+                                    <tr>
+                                        <td class="text-start ps-3 text-muted">
+                                            <?= date('d/m', strtotime($swim['started_at'])) ?></td>
+                                        <td class="fw-bold"><?= formatDist($swim['distance_meters']) ?></td>
+                                        <td class="fw-bold" style="color: #0dcaf0;">
+                                            <?= formatPace($swim['pace_per_100m']) ?></td>
+                                    </tr>
+                                    <?php endforeach; ?>
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+                <?php endif; ?>
+            </div>
+
         </div>
         <?php endif; ?>
 
@@ -277,11 +358,13 @@ if (!function_exists('formatTime')) {
                 <h2 class="h4 pb-2 mb-4 section-title"> Renforcement & Musculation</h2>
                 <a class="btn btn-outline-success btn-sm" href="<?= site_url('strength') ?>">Progression Muscu</a>
             </div>
+
             <div class="row g-4">
-                <div class="col-12 col-md-6">
+                <!-- Tonnage -->
+                <div class="col-12 col-xl-4">
                     <div class="card h-100">
                         <div class="card-body">
-                            <h3 class="h6 fw-bold mb-3 text-muted">Évolution du Tonnage</h3>
+                            <h3 class="h6 fw-bold mb-3 text-muted"> Évolution du Tonnage</h3>
                             <?php if (empty($tonnageData)): ?>
                             <p class="text-muted small">Aucune donnée de tonnage.</p>
                             <?php else: ?>
@@ -290,7 +373,24 @@ if (!function_exists('formatTime')) {
                         </div>
                     </div>
                 </div>
-                <div class="col-12 col-md-6">
+
+                <!-- AJOUT : Heatmap Musculaire -->
+                <div class="col-12 col-xl-4">
+                    <div class="card h-100">
+                        <div class="card-body">
+                            <h3 class="h6 fw-bold mb-3 text-muted"> Heatmap Musculaire (15j)</h3>
+                            <?php if (empty($muscleHeatmap)): ?>
+                            <p class="text-muted small">Aucune donnée musculaire récente.</p>
+                            <?php else: ?>
+                            <div style="height: 250px; display:flex; justify-content:center;"><canvas
+                                    id="muscleRadarChart"></canvas></div>
+                            <?php endif ?>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Dernières Séances -->
+                <div class="col-12 col-xl-4">
                     <div class="card h-100">
                         <div class="card-body p-0">
                             <div class="p-3 pb-2 border-bottom">
@@ -301,7 +401,7 @@ if (!function_exists('formatTime')) {
                                 <?php
                                     $stravaId = $workout['strava_activity_id'];
                                     $workoutId = $workout['local_workout_id'] ?? $stravaId;
-                                    ?>
+                                ?>
                                 <div class="list-group-item py-2">
                                     <div class="d-flex justify-content-between align-items-start mb-1">
                                         <a href="<?= site_url('workout/' . $workoutId) ?>"
@@ -339,6 +439,7 @@ if (!function_exists('formatTime')) {
     <script>
     Chart.defaults.maintainAspectRatio = false;
 
+    // --- 1. Graphique Strava Original ---
     const allActivities = <?= json_encode($rawActivitiesForChart ?? []) ?>;
     const defaultLabels = <?= json_encode(array_column($monthlyDistance ?? [], 'month_key')) ?>;
     const defaultValues =
@@ -405,20 +506,18 @@ if (!function_exists('formatTime')) {
         defaultLabels.forEach(label => {
             filteredDataByMonth[label] = 0;
         });
-
         allActivities.forEach(act => {
             if (selectedSport === 'all' || act.sport === selectedSport) {
-                if (filteredDataByMonth.hasOwnProperty(act.date)) {
-                    filteredDataByMonth[act.date] += (act.distance / 1000);
-                }
+                if (filteredDataByMonth.hasOwnProperty(act.date)) filteredDataByMonth[act.date] += (act
+                    .distance / 1000);
             }
         });
-
         const newValues = defaultLabels.map(label => Math.round(filteredDataByMonth[label] * 100) / 100);
         stravaChart.data.datasets[0].data = newValues;
         stravaChart.update();
     }
 
+    // --- 2. Graphique Tonnage Original ---
     <?php if (!empty($tonnageData)): ?>
     const tonnageLabels = <?= json_encode(array_column($tonnageData, 'workout_date')) ?>;
     const tonnageValues = <?= json_encode(array_column($tonnageData, 'total_volume_kg')) ?>;
@@ -465,6 +564,85 @@ if (!function_exists('formatTime')) {
         }
     });
     <?php endif ?>
+
+    // --- AJOUT : 3. Heatmap Radar Musculaire ---
+    <?php if (!empty($muscleHeatmap)): ?>
+    new Chart(document.getElementById('muscleRadarChart').getContext('2d'), {
+        type: 'radar',
+        data: {
+            labels: <?= json_encode(array_column($muscleHeatmap, 'muscle_group')) ?>,
+            datasets: [{
+                label: 'Volume (kg)',
+                data: <?= json_encode(array_column($muscleHeatmap, 'volume')) ?>,
+                backgroundColor: 'rgba(25, 135, 84, 0.2)',
+                borderColor: '#198754',
+                pointBackgroundColor: '#198754',
+                borderWidth: 2
+            }]
+        },
+        options: {
+            plugins: {
+                legend: {
+                    display: false
+                }
+            },
+            scales: {
+                r: {
+                    ticks: {
+                        display: false
+                    },
+                    grid: {
+                        color: '#e9ecef'
+                    },
+                    angleLines: {
+                        color: '#e9ecef'
+                    }
+                }
+            }
+        }
+    });
+    <?php endif; ?>
+
+    // --- AJOUT : 4. Graphique Zones Cardio ---
+    <?php if (!empty($hrZones) && array_sum($hrZones) > 0): ?>
+    new Chart(document.getElementById('hrZonesChart').getContext('2d'), {
+        type: 'bar',
+        data: {
+            labels: ['Z1 (Récup)', 'Z2 (Endurance)', 'Z3 (Tempo)', 'Z4 (Seuil)', 'Z5 (Max)'],
+            datasets: [{
+                label: 'Heures',
+                data: [
+                    <?= round(($hrZones['z1_active_recovery'] ?? 0)/3600, 1) ?>,
+                    <?= round(($hrZones['z2_endurance'] ?? 0)/3600, 1) ?>,
+                    <?= round(($hrZones['z3_tempo'] ?? 0)/3600, 1) ?>,
+                    <?= round(($hrZones['z4_threshold'] ?? 0)/3600, 1) ?>,
+                    <?= round(($hrZones['z5_vo2max'] ?? 0)/3600, 1) ?>
+                ],
+                backgroundColor: ['#6c757d', '#198754', '#ffc107', '#fd7e14', '#dc3545'],
+                borderRadius: 4
+            }]
+        },
+        options: {
+            plugins: {
+                legend: {
+                    display: false
+                }
+            },
+            scales: {
+                x: {
+                    grid: {
+                        display: false
+                    }
+                },
+                y: {
+                    border: {
+                        display: false
+                    }
+                }
+            }
+        }
+    });
+    <?php endif; ?>
     </script>
 </body>
 

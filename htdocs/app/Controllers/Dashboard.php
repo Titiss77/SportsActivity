@@ -90,6 +90,19 @@ class Dashboard extends BaseController
         }
         unset($monthStat);
 
+        // ==========================================
+        // AJOUTS PREMIUM : Récupération des données
+        // ==========================================
+        
+        $cardioHoursLast7Days = $activityModel->getRecentCardioLoad($userId, 7);
+        $strengthTonnageLast7Days = $strengthModel->getRecentStrengthLoad($userId, 7);
+        $fatigue = ($cardioHoursLast7Days * 2.5) + (($strengthTonnageLast7Days / 1000) * 2);
+        $readinessScore = max(1, min(100, round(100 - $fatigue)));
+        
+        $muscleHeatmap = $strengthModel->getMuscleHeatmap($userId, 15);
+        $hrZones = $activityModel->getHeartRateZones($userId, 30);
+        $swimMetrics = $activityModel->getSwimMetrics($userId, 5);
+
         $data = [
             'title'                 => 'Tableau de bord Global',
             'userSettings'          => $userSettings,
@@ -100,6 +113,12 @@ class Dashboard extends BaseController
             'rawActivitiesForChart' => $rawActivitiesForChart,
             'tonnageData'           => $tonnageData,
             'recentWorkouts'        => array_slice($recentWorkouts, 0, 5),
+            
+            // Nouvelles données
+            'readinessScore'        => $readinessScore,
+            'muscleHeatmap'         => $muscleHeatmap,
+            'hrZones'               => $hrZones,
+            'swimMetrics'           => $swimMetrics,
         ];
 
         return view('dashboard/index', $data);
