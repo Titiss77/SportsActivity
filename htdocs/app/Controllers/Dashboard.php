@@ -108,7 +108,8 @@ class Dashboard extends BaseController
     {
         $userId = auth()->id();
         $activityModel = new ActivityModel();
-        $activities = $activityModel->getActivitiesSince($userId, 6);
+        $activities = $activityModel->getActivitiesSince($userId);
+        $sport = null;
 
         if (empty($activities)) {
             $activities = [];

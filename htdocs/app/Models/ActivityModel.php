@@ -41,16 +41,14 @@ class ActivityModel extends Model
     /**
      * Récupère tout l'historique sur X mois complets (sans limite de 100 lignes)
      */
-    public function getActivitiesSince(int $userId, int $months = 6): array
+    public function getActivitiesSince(int $userId): array
     {
         $sql = "
-            SELECT *
-            FROM strava_activities
-            WHERE user_id = ?
-              AND started_at >= DATE_FORMAT(DATE_SUB(CURDATE(), INTERVAL ? MONTH), '%Y-%m-01')
-            ORDER BY started_at DESC
+            SELECT * 
+            FROM strava_activities WHERE user_id = ?
+            ORDER BY started_at DESC;
         ";
-        return $this->db->query($sql, [$userId, $months])->getResultArray();
+        return $this->db->query($sql, [$userId])->getResultArray();
     }
 
     public function getStatsBySport(int $userId): array
