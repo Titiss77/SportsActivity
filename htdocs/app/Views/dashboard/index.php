@@ -15,12 +15,18 @@ if (!function_exists('formatTime')) {
         return $h > 0 ? sprintf('%dh %02d', $h, $m) : sprintf('%d min', $m);
     }
 }
-// AJOUT : Format d'allure pour la natation
 if (!function_exists('formatPace')) {
     function formatPace($secPer100m) {
         if (!$secPer100m) return '-';
         $m = intdiv((int)$secPer100m, 60); $s = (int)$secPer100m % 60;
         return sprintf('%02d:%02d /100m', $m, $s);
+    }
+}
+if (!function_exists('formatPaceKm')) {
+    function formatPaceKm($secPerKm) {
+        if (!$secPerKm) return '-';
+        $m = intdiv((int)$secPerKm, 60); $s = (int)$secPerKm % 60;
+        return sprintf('%02d:%02d /km', $m, $s);
     }
 }
 ?>
@@ -93,7 +99,6 @@ if (!function_exists('formatPace')) {
         font-size: 0.85rem;
     }
 
-    /* AJOUT : Style pour le badge Readiness */
     .readiness-badge {
         font-size: 1.25rem;
         font-weight: bold;
@@ -158,7 +163,6 @@ if (!function_exists('formatPace')) {
                     <div><button class="btn btn-sm bg-strava" type="submit">Importer</button></div>
                 </form>
 
-                <!-- AJOUT : Badge Readiness Score -->
                 <div class="d-flex align-items-center mt-3 mt-md-0">
                     <div class="text-end me-3">
                         <span class="d-block fw-bold text-dark mb-0">Score d'Énergie</span>
@@ -237,7 +241,6 @@ if (!function_exists('formatPace')) {
                 </div>
             </div>
 
-            <!-- Listes et Graphique global Strava -->
             <div class="row g-4">
                 <div class="col-12 col-xl-6">
                     <div class="row g-2">
@@ -298,22 +301,54 @@ if (!function_exists('formatPace')) {
                 </div>
             </div>
 
-            <!-- AJOUT : Zones de fréquence cardiaque & Natation -->
             <div class="row g-4 mt-1">
-                <!-- Zones Cardio -->
-                <?php if (!empty($hrZones) && array_sum($hrZones) > 0): ?>
+                <!-- NOUVEAU : Records & Allures Max -->
+                <?php if (!empty($bestPerformances)): ?>
                 <div class="col-12 col-xl-6">
                     <div class="card h-100 shadow-sm border-0">
-                        <div class="card-body">
-                            <h3 class="h6 fw-bold mb-1 text-muted">Distribution FC (30 derniers jours)</h3>
-                            <small class="text-muted d-block mb-3">Volume par zone de fréquence cardiaque</small>
-                            <div style="height: 200px; position: relative;"><canvas id="hrZonesChart"></canvas></div>
+                        <div class="card-body p-0">
+                            <div class="p-3 pb-2 border-bottom">
+                                <h3 class="h6 fw-bold mb-0 text-muted" style="color: #dc3545 !important;">Records &
+                                    Allures Max</h3>
+                                <small class="text-muted d-block mt-1">Meilleures moyennes enregistrées par
+                                    sport</small>
+                            </div>
+                            <table class="table table-hover mb-0 text-center align-middle condensed-text">
+                                <thead class="table-light">
+                                    <tr>
+                                        <th class="text-start ps-3">Sport</th>
+                                        <th>Vitesse / Allure Max</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    <?php foreach ($bestPerformances as $perf): 
+                                        $sportName = $perf['sport_trad'] ?? $perf['sport'];
+                                        $displayPace = '-';
+                                        
+                                        // Vitesse pour le Vélo (km/h)
+                                        if (stripos($perf['sport'], 'Ride') !== false || stripos($perf['sport'], 'Bike') !== false || stripos($perf['sport'], 'Velo') !== false) {
+                                            $displayPace = number_format($perf['max_speed_kmh'], 1, ',', ' ') . ' km/h';
+                                        // Allure pour la Natation (/100m)
+                                        } elseif (stripos($perf['sport'], 'Swim') !== false || stripos($perf['sport'], 'Natation') !== false) {
+                                            $displayPace = formatPace($perf['best_pace_100m']);
+                                        // Allure pour le reste (Course, Marche) (/km)
+                                        } else {
+                                            $displayPace = formatPaceKm($perf['best_pace_km']);
+                                        }
+                                    ?>
+                                    <tr>
+                                        <td class="text-start ps-3 fw-semibold text-muted"><?= esc($sportName) ?></td>
+                                        <td class="fw-bold text-dark"><?= $displayPace ?></td>
+                                    </tr>
+                                    <?php endforeach; ?>
+                                </tbody>
+                            </table>
                         </div>
                     </div>
                 </div>
                 <?php endif; ?>
 
-                <!-- Tableau Natation (si pertinent) -->
+                <!-- Tableau Natation -->
                 <?php if (!empty($swimMetrics)): ?>
                 <div class="col-12 col-xl-6">
                     <div class="card h-100 shadow-sm border-0">
@@ -352,7 +387,6 @@ if (!function_exists('formatPace')) {
         <?php endif; ?>
 
         <?php if (!empty($recentWorkouts)): ?>
-        <!-- Section Musculation -->
         <div class="mb-5">
             <div style="display: flex; justify-content: space-between; align-items: flex-start;">
                 <h2 class="h4 pb-2 mb-4 section-title"> Renforcement & Musculation</h2>
@@ -360,7 +394,6 @@ if (!function_exists('formatPace')) {
             </div>
 
             <div class="row g-4">
-                <!-- Tonnage -->
                 <div class="col-12 col-xl-4">
                     <div class="card h-100">
                         <div class="card-body">
@@ -374,7 +407,6 @@ if (!function_exists('formatPace')) {
                     </div>
                 </div>
 
-                <!-- AJOUT : Heatmap Musculaire -->
                 <div class="col-12 col-xl-4">
                     <div class="card h-100">
                         <div class="card-body">
@@ -389,7 +421,6 @@ if (!function_exists('formatPace')) {
                     </div>
                 </div>
 
-                <!-- Dernières Séances -->
                 <div class="col-12 col-xl-4">
                     <div class="card h-100">
                         <div class="card-body p-0">
@@ -565,7 +596,7 @@ if (!function_exists('formatPace')) {
     });
     <?php endif ?>
 
-    // --- AJOUT : 3. Heatmap Radar Musculaire ---
+    // --- 3. Heatmap Radar Musculaire ---
     <?php if (!empty($muscleHeatmap)): ?>
     new Chart(document.getElementById('muscleRadarChart').getContext('2d'), {
         type: 'radar',
@@ -596,47 +627,6 @@ if (!function_exists('formatPace')) {
                     },
                     angleLines: {
                         color: '#e9ecef'
-                    }
-                }
-            }
-        }
-    });
-    <?php endif; ?>
-
-    // --- AJOUT : 4. Graphique Zones Cardio ---
-    <?php if (!empty($hrZones) && array_sum($hrZones) > 0): ?>
-    new Chart(document.getElementById('hrZonesChart').getContext('2d'), {
-        type: 'bar',
-        data: {
-            labels: ['Z1 (Récup)', 'Z2 (Endurance)', 'Z3 (Tempo)', 'Z4 (Seuil)', 'Z5 (Max)'],
-            datasets: [{
-                label: 'Heures',
-                data: [
-                    <?= round(($hrZones['z1_active_recovery'] ?? 0)/3600, 1) ?>,
-                    <?= round(($hrZones['z2_endurance'] ?? 0)/3600, 1) ?>,
-                    <?= round(($hrZones['z3_tempo'] ?? 0)/3600, 1) ?>,
-                    <?= round(($hrZones['z4_threshold'] ?? 0)/3600, 1) ?>,
-                    <?= round(($hrZones['z5_vo2max'] ?? 0)/3600, 1) ?>
-                ],
-                backgroundColor: ['#6c757d', '#198754', '#ffc107', '#fd7e14', '#dc3545'],
-                borderRadius: 4
-            }]
-        },
-        options: {
-            plugins: {
-                legend: {
-                    display: false
-                }
-            },
-            scales: {
-                x: {
-                    grid: {
-                        display: false
-                    }
-                },
-                y: {
-                    border: {
-                        display: false
                     }
                 }
             }

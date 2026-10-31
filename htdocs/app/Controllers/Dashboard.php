@@ -100,8 +100,14 @@ class Dashboard extends BaseController
         $readinessScore = max(1, min(100, round(100 - $fatigue)));
         
         $muscleHeatmap = $strengthModel->getMuscleHeatmap($userId, 15);
-        $hrZones = $activityModel->getHeartRateZones($userId, 30);
         $swimMetrics = $activityModel->getSwimMetrics($userId, 5);
+        
+        // Extraction et traduction des meilleures allures
+        $bestPerformances = $activityModel->getBestPerformancesBySport($userId);
+        foreach ($bestPerformances as &$perf) {
+            $perf['sport_trad'] = $tradModel->getTrad($perf['sport']) ?? $perf['sport'];
+        }
+        unset($perf);
 
         $data = [
             'title'                 => 'Tableau de bord Global',
@@ -117,7 +123,7 @@ class Dashboard extends BaseController
             // Nouvelles données
             'readinessScore'        => $readinessScore,
             'muscleHeatmap'         => $muscleHeatmap,
-            'hrZones'               => $hrZones,
+            'bestPerformances'      => $bestPerformances,
             'swimMetrics'           => $swimMetrics,
         ];
 
