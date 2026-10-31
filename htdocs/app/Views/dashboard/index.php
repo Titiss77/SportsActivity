@@ -1,13 +1,17 @@
 <?php
 if (!function_exists('formatDist')) {
-    function formatDist($meters) {
-        if ($meters < 1000) return number_format($meters, 0, ',', ' ') . ' m';
+    function formatDist($meters)
+    {
+        if ($meters < 1000)
+            return number_format($meters, 0, ',', ' ') . ' m';
         return number_format($meters / 1000, 2, ',', ' ') . ' km';
     }
 }
 if (!function_exists('formatTime')) {
-    function formatTime($seconds) {
-        $h = intdiv($seconds, 3600); $m = intdiv($seconds % 3600, 60);
+    function formatTime($seconds)
+    {
+        $h = intdiv($seconds, 3600);
+        $m = intdiv($seconds % 3600, 60);
         return $h > 0 ? sprintf('%dh %02d', $h, $m) : sprintf('%d min', $m);
     }
 }
@@ -162,25 +166,26 @@ if (!function_exists('formatTime')) {
                             <h3 class="h6 fw-bold mb-3 text-muted">🎯 Objectifs mensuels</h3>
                             <div class="row g-4">
                                 <?php foreach ($currentMonthStats as $monthStat): ?>
-                                <?php 
-                                    if ($monthStat['sport'] === 'WeightTraining') continue;
-                                    $sportName = $monthStat['sport'];
-                                    $goalDist = 20000;
-                                    
-                                    if ($sportName === 'Ride' || $sportName === 'VirtualRide') {
-                                        $sportName = 'Vélo';
-                                        $goalDist = ($userSettings['goal_ride_km'] ?? 300) * 1000;
-                                    } elseif ($sportName === 'Run') {
-                                        $sportName = 'Course à pied';
-                                        $goalDist = ($userSettings['goal_run_km'] ?? 60) * 1000;
-                                    } elseif ($sportName === 'Swim') {
-                                        $sportName = 'Natation';
-                                        $goalDist = ($userSettings['goal_swim_km'] ?? 20) * 1000;
-                                    } elseif ($sportName === 'Walk') {
-                                        $sportName = 'Marche';
-                                        $goalDist = ($userSettings['goal_walk_km'] ?? 20) * 1000;
-                                    }
-                                    $progress = min(100, ($monthStat['total_distance'] / max(1, $goalDist)) * 100);
+                                <?php
+                                if ($monthStat['sport'] === 'WeightTraining')
+                                    continue;
+                                $sportName = $monthStat['sport'];
+                                $goalDist = 20000;
+
+                                if ($sportName === 'Ride' || $sportName === 'VirtualRide') {
+                                    $sportName = 'Vélo';
+                                    $goalDist = ($userSettings['goal_ride_km'] ?? 300) * 1000;
+                                } elseif ($sportName === 'Run') {
+                                    $sportName = 'Course à pied';
+                                    $goalDist = ($userSettings['goal_run_km'] ?? 60) * 1000;
+                                } elseif ($sportName === 'Swim') {
+                                    $sportName = 'Natation';
+                                    $goalDist = ($userSettings['goal_swim_km'] ?? 20) * 1000;
+                                } elseif ($sportName === 'Walk') {
+                                    $sportName = 'Marche';
+                                    $goalDist = ($userSettings['goal_walk_km'] ?? 20) * 1000;
+                                }
+                                $progress = min(100, ($monthStat['total_distance'] / max(1, $goalDist)) * 100);
                                 ?>
                                 <div class="col-12 col-md-6 col-xl-3">
                                     <div class="d-flex justify-content-between mb-1">
@@ -297,10 +302,10 @@ if (!function_exists('formatTime')) {
                             </div>
                             <div class="list-group list-group-flush">
                                 <?php foreach ($recentWorkouts as $workout): ?>
-                                <?php 
-                                        $stravaId = $workout['strava_activity_id'];
-                                        $workoutId = $workout['local_workout_id'] ?? $stravaId;
-                                    ?>
+                                <?php
+                                $stravaId = $workout['strava_activity_id'];
+                                $workoutId = $workout['local_workout_id'] ?? $stravaId;
+                                ?>
                                 <div class="list-group-item py-2">
                                     <div class="d-flex justify-content-between align-items-start mb-1">
                                         <a href="<?= site_url('workout/' . $workoutId) ?>"
