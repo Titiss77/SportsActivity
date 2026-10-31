@@ -109,6 +109,7 @@ if (!function_exists('formatTime')) {
                     </svg>
                 </a>
                 <?php endif; ?>
+                <a class="btn btn-outline-success btn-sm" href="<?= site_url('activites') ?>">Historique</a>
                 <a class="btn btn-outline-secondary btn-sm" href="<?= site_url('profile') ?>">Mon Profil
                     (<?= esc(auth()->user()->username ?? 'User') ?>)</a>
                 <a class="btn btn-danger btn-sm" href="<?= site_url('logout') ?>">Déconnexion</a>

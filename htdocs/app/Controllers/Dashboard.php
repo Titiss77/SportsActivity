@@ -103,4 +103,42 @@ class Dashboard extends BaseController
 
         return view('dashboard/index', $data);
     }
+
+    public function activities()
+    {
+        $userId = auth()->id();
+        $activityModel = new ActivityModel();
+        $activities = $activityModel->getActivitiesSince($userId, 6);
+
+        if (empty($activities)) {
+            $activities = [];
+        }
+
+        if ($activities) {
+            // Normalisation des noms de sports
+            foreach ($activities as &$activity) {
+                $sport = $activity['sport'] ?: 'Autre';
+                if ($sport === 'Ride' || $sport === 'VirtualRide' || $sport === 'Bike') {
+                    $activity['sport'] = 'Vélo';
+                } elseif (stripos($sport, 'Run') !== false) {
+                    $activity['sport'] = 'Course à pied';
+                } elseif (stripos($sport, 'Swim') !== false || $sport === 'Open Water') {
+                    $activity['sport'] = 'Natation';
+                } elseif ($sport === 'Walk' || $sport === 'Hike') {
+                    $activity['sport'] = 'Marche';
+                } elseif ($sport === 'WeightTraining') {
+                    $activity['sport'] = 'Musculation';
+                }
+                
+            }
+        }
+
+        $data = [
+            'title'      => 'Historique des Activités',
+            'globalStats' => $activityModel->getStatsBySport($userId),
+            'activities' => $activities,
+        ];
+
+        return view('dashboard/activities', $data);
+    }
 }
