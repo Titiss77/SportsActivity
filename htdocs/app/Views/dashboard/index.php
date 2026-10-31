@@ -40,11 +40,18 @@ if (!function_exists('formatTime')) {
     <div class="container">
         <a class="navbar-brand fw-bold" href="<?= site_url('/') ?>">Tableau de Bord</a>
         <div class="d-flex flex-wrap gap-2">
-            <?php if (empty($userSettings['strava_access_token'])): ?>
-                <a href="<?= site_url('strava/connect') ?>">
-                    <img src="https://badges.strava.com/echelon-sprite-connect-with-strava.png" alt="Connect with Strava" style="height: 36px;">
-                </a>
-            <?php endif; ?>
+        <?php if (empty($userSettings['strava_access_token'])): ?>
+            <a href="<?= site_url('strava/connect') ?>" class="d-inline-block text-decoration-none" title="Connect with Strava">
+                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 150 48" width="200" height="32" style="border-radius: 4px; display: block;">
+                    <rect width="230" height="48" rx="4" fill="#fc4c02"/>
+                    <!-- Logo Strava officiel -->
+                    <path fill="#ffffff" d="M25.7 11.2l-7.8 15.4h4.6l3.2-6.4 3.2 6.4h4.6l-7.8-15.4z"/>
+                    <path fill="#fda580" d="M31.4 26.6l-3.2 6.4-3.2-6.4h-3.5l6.7 13.2 6.7-13.2h-3.5z"/>
+                    <!-- Texte officiel -->
+                    <text x="50" y="29" fill="#ffffff" font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Arial, sans-serif" font-size="13" font-weight="700" letter-spacing="0.4">CONNECT WITH STRAVA</text>
+                </svg>
+            </a>
+        <?php endif; ?>
             <a class="btn btn-outline-success btn-sm" href="<?= site_url('strength') ?>">Progression Muscu</a>
             <a class="btn btn-outline-secondary btn-sm" href="<?= site_url('profile') ?>">Mon Profil (<?= esc(auth()->user()->username ?? 'User') ?>)</a>
             <a class="btn btn-danger btn-sm" href="<?= site_url('logout') ?>">Déconnexion</a>
