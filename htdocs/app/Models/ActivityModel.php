@@ -56,14 +56,35 @@ class ActivityModel extends Model
         $sql = "
             SELECT sport,
                    COUNT(*) AS total_activities, 
-                   COALESCE(SUM(distance_meters), 0) AS total_distance_meters, 
-                   COALESCE(SUM(duration_seconds), 0) AS total_duration_seconds
+                   ROUND(SUM(distance_meters)/1000, 2) AS total_distance, 
+                   CONCAT(
+                        FLOOR(COALESCE(SUM(duration_seconds), 0) / 3600), 'h ',
+                        FLOOR((COALESCE(SUM(duration_seconds), 0) % 3600) / 60), 'min ',
+                        COALESCE(SUM(duration_seconds), 0) % 60, 's'
+                    ) AS total_duration
             FROM strava_activities
             WHERE user_id = ?
             GROUP BY sport
             ORDER BY total_activities DESC
         ";
         return $this->db->query($sql, [$userId])->getResultArray();
+    }
+
+    public function getAllStats(int $userId): array
+    {
+        $sql = "
+            SELECT 
+                COUNT(*) AS total_activities, 
+                ROUND(SUM(distance_meters)/1000, 2) AS total_distance, 
+                CONCAT(
+                    FLOOR(COALESCE(SUM(duration_seconds), 0) / 3600), 'h ',
+                    FLOOR((COALESCE(SUM(duration_seconds), 0) % 3600) / 60), 'min ',
+                    COALESCE(SUM(duration_seconds), 0) % 60, 's'
+                ) AS total_duration
+            FROM strava_activities
+            WHERE user_id = ?
+        ";
+        return $this->db->query($sql, [$userId])->getRowArray();
     }
 
     public function getMonthlyDistance(int $userId, int $months = 6): array

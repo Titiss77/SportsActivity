@@ -33,23 +33,38 @@
                     <tr>
                         <th>Sport</th>
                         <th>Activité Totales</th>
-                        <th>Distance (m)</th>
+                        <th>Distance (km)</th>
                         <th>Durée (s)</th>
                     </tr>
                 </thead>
-                <tbody><?php if (empty($activities)): ?><tr>
+                <tbody>
+                    <?php if (empty($activities)): ?>
+                    <tr>
                         <td colspan="7" class="text-center py-5 text-secondary">Aucune activité enregistrée. </td>
-                    </tr><?php else: foreach ($globalStats as $global): ?><?php $count=(int) ($global['total_activities'] ?? 0);
-            ?><?php $distance=(int) ($global['total_distance_meters'] ?? 0);
-            ?><?php $duration=(int) ($global['total_duration_seconds'] ?? 0);
-            ?><tr>
+                    </tr>
+                    <?php else: ?>
+                    <tr style="font-weight: bold; background-color: #f8f9fa;">
+                        <?php $countAll=(int) ($allGlobal['total_activities'] ?? 0);?>
+                        <?php $distanceAll=(int) ($allGlobal['total_distance'] ?? 0);?>
+                        <?php $durationAll=(int) ($allGlobal['total_duration'] ?? 0);?>
+                        <td>Toutes les activités</td>
+                        <td><?= $countAll ?></td>
+                        <td><?= $distanceAll ?></td>
+                        <td><?= $durationAll ?></td>
+                    </tr>
+                    <?php foreach ($globalStats as $global): ?>
+                    <?php $count=(int) ($global['total_activities'] ?? 0);?>
+                    <?php $distance=(int) ($global['total_distance'] ?? 0);?>
+                    <?php $duration=(int) ($global['total_duration'] ?? 0);?>
+                    <tr>
                         <td><?=esc($global['sport'] ?: '—') ?></td>
                         <td><?=$count ?></td>
                         <td><?=$distance ?></td>
                         <td><?=$duration ?></td>
                     </tr><?php endforeach;
 
-            endif ?></tbody>
+            endif ?>
+                </tbody>
             </table>
         </div>
 

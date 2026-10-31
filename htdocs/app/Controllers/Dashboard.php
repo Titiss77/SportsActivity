@@ -113,6 +113,7 @@ class Dashboard extends BaseController
         
         $activities = $activityModel->getActivitiesSince($userId);
         $globalStats = $activityModel->getStatsBySport($userId);
+        $AllStats = $activityModel->getAllStats($userId);
 
         if (empty($activities)) {
             $activities = [];
@@ -136,6 +137,7 @@ class Dashboard extends BaseController
         
         $data = [
             'title'      => 'Historique des Activités',
+            'allGlobal'  => $AllStats,
             'globalStats' => $globalStats,
             'activities' => $activities,
         ];
