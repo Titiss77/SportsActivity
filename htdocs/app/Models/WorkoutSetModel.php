@@ -42,7 +42,9 @@ class WorkoutSetModel extends Model
         $sql = "
             SELECT 
                 DATE_FORMAT(COALESCE(sa.started_at, sw.date), '%Y-%m-%d') as workout_date,
-                MAX(ws.weight) as max_weight_lifted
+                ROUND(SUM(ws.weight * ws.reps), 0) as total_weight_lifted,
+                ROUND(AVG(ws.weight), 0) as weight_used,
+                SUM(ws.reps) as total_reps
             FROM strength_workouts sw
             JOIN workout_sets ws ON sw.id = ws.workout_id
             LEFT JOIN strava_activities sa 

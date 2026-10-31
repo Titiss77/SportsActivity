@@ -34,15 +34,17 @@
 <?php if (!empty($evolutionData)): ?>
 <script>
     const labels = <?= json_encode(array_column($evolutionData, 'workout_date')) ?>;
-    const values = <?= json_encode(array_column($evolutionData, 'max_weight_lifted')) ?>;
+    const totalWeights = <?= json_encode(array_column($evolutionData, 'total_weight_lifted')) ?>;
+    const weights = <?= json_encode(array_column($evolutionData, 'weight_used')) ?>;
+    const reps = <?= json_encode(array_column($evolutionData, 'total_reps')) ?>;
 
     new Chart(document.getElementById('exerciseChart'), {
         type: 'line',
         data: { 
             labels: labels, 
             datasets: [{ 
-                label: 'Charge Max (kg)', 
-                data: values, 
+                label: 'Charge (kg)', 
+                data: totalWeights, 
                 borderColor: '#dd4814',
                 backgroundColor: 'rgba(221, 72, 20, 0.1)',
                 fill: true,
@@ -53,6 +55,17 @@
         },
         options: { 
             responsive: true, 
+            plugins: {
+                tooltip: {
+                    callbacks: {
+                        // Personnalise l'infobulle pour afficher "Charge x Répétitions" au survol
+                        label: function(context) {
+                            let index = context.dataIndex;
+                            return ` Charge : ${totalWeights[index]} kg (${weights[index]} kg × ${reps[index]} reps)`;
+                        }
+                    }
+                }
+            },
             scales: { 
                 y: { 
                     beginAtZero: false,
