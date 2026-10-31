@@ -4,6 +4,7 @@ namespace App\Controllers;
 
 use App\Models\ActivityModel;
 use App\Models\WorkoutSetModel;
+use App\Models\TradModel;
 use App\Models\StrengthWorkoutModel;
 
 class Dashboard extends BaseController
@@ -108,6 +109,7 @@ class Dashboard extends BaseController
     {
         $userId = auth()->id();
         $activityModel = new ActivityModel();
+        $tradModel = new TradModel();
         $activities = $activityModel->getActivitiesSince($userId);
         $globalStats = $activityModel->getStatsBySport($userId);
         $sport = null;
@@ -120,36 +122,17 @@ class Dashboard extends BaseController
             // Normalisation des noms de sports
             foreach ($activities as &$activity) {
                 $sport = $activity['sport'] ?: 'Autre';
-                if ($sport === 'Ride' || $sport === 'VirtualRide' || $sport === 'Bike') {
-                    $activity['sport'] = 'Vélo';
-                } elseif (stripos($sport, 'Run') !== false) {
-                    $activity['sport'] = 'Course à pied';
-                } elseif (stripos($sport, 'Swim') !== false || $sport === 'Open Water') {
-                    $activity['sport'] = 'Natation';
-                } elseif ($sport === 'Walk' || $sport === 'Hike') {
-                    $activity['sport'] = 'Marche';
-                } elseif ($sport === 'WeightTraining') {
-                    $activity['sport'] = 'Musculation';
-                }
-                
+                $activity['sport'] = $tradModel->getTrad($sport) ?? "$sport";
             }
+            unset($activity); // Toujours détruire la référence après la boucle
         }
 
         if ($globalStats) {
             foreach ($globalStats as &$global) {
                 $sport = $global['sport'] ?: 'Autre';
-                if ($sport === 'Ride' || $sport === 'VirtualRide' || $sport === 'Bike') {
-                    $global['sport'] = 'Vélo';
-                } elseif (stripos($sport, 'Run') !== false) {
-                    $global['sport'] = 'Course à pied';
-                } elseif (stripos($sport, 'Swim') !== false || $sport === 'Open Water') {
-                    $global['sport'] = 'Natation';
-                } elseif ($sport === 'Walk' || $sport === 'Hike') {
-                    $global['sport'] = 'Marche';
-                } elseif ($sport === 'WeightTraining') {
-                    $global['sport'] = 'Musculation';
-                }
+                $global['sport'] = $tradModel->getTrad($sport) ?? "$sport";
             }
+            unset($global);
         }
 
         $data = [
