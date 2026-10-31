@@ -75,6 +75,36 @@
         </div>
     </main>
 
+
+    <table id="myAdminTable" class="dataTable-table">
+        <thead>
+            <tr>
+                <th>Sport</th>
+                <th>Activité Totales</th>
+                <th>Distance (m)</th>
+                <th>Durée (s)</th>
+            </tr>
+        </thead>
+        <tbody>
+            <?php if (empty($activities)): ?>
+            <tr>
+                <td colspan="7" class="text-center py-5 text-secondary">Aucune activité enregistrée.
+                </td>
+            </tr>
+            <?php else: foreach ($globalStats as $global): ?>
+            <?php $count = (int) ($global['total_activities'] ?? 0); ?>
+            <?php $distance = (int) ($global['total_distance_meters'] ?? 0); ?>
+            <?php $duration = (int) ($global['total_duration_seconds'] ?? 0); ?>
+            <tr>
+                <td><?= esc($global['sport'] ?: '—') ?></td>
+                <td><?= $count ?></td>
+                <td><?= $distance ?></td>
+                <td><?= $duration ?></td>
+            </tr>
+            <?php endforeach; endif ?>
+        </tbody>
+    </table>
+
     <script>
     document.addEventListener("DOMContentLoaded", function() {
         // Initialisation et traduction de Simple DataTables
