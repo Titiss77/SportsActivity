@@ -1,6 +1,4 @@
-<?php
-
-namespace App\Controllers;
+<?php namespace App\Controllers;
 
 use App\Models\ActivityModel;
 use App\Models\WorkoutSetModel;
@@ -17,7 +15,8 @@ class Dashboard extends BaseController
         $activityModel = new ActivityModel();
         $strengthModel = new WorkoutSetModel();
         $workoutModel  = new StrengthWorkoutModel();
-
+        $tradModel     = new TradModel();
+        
         $userSettings = $db->table('user_settings')->where('user_id', $userId)->get()->getRowArray();
         
         if (!$userSettings) {
@@ -30,13 +29,13 @@ class Dashboard extends BaseController
             ];
         }
 
-        // Récupère TOUTES les activités des 6 derniers mois complets (depuis le 1er avril)
         $recentActivities = $activityModel->getActivitiesSince($userId, 6);
         
         $activitiesBySport = [];
         $recentWorkouts = [];
-         
-        $tonnageData = $strengthModel->getTotalVolumePerUser($userId); 
+        
+        $tonnageData = $strengthModel->getTotalVolumePerUser($userId);
+        
         $tonnageByDate = [];
         foreach ($tonnageData as $t) {
             $tonnageByDate[$t['workout_date']] = (float) $t['total_volume_kg'];
@@ -45,15 +44,14 @@ class Dashboard extends BaseController
         $localWorkouts = $workoutModel->where('user_id', $userId)->findAll();
         $localWorkoutIdsByDate = [];
         $localWorkoutIdsByStrava = [];
-        foreach ($localWorkouts as $lw) { 
-            $localWorkoutIdsByDate[date('Y-m-d', strtotime($lw['date']))] = $lw['id'];
+        foreach ($localWorkouts as $lw) {
+             $localWorkoutIdsByDate[date('Y-m-d', strtotime($lw['date']))] = $lw['id'];
             if (!empty($lw['strava_activity_id'])) {
                 $localWorkoutIdsByStrava[$lw['strava_activity_id']] = $lw['id'];
             }
         }
         
         $rawActivitiesForChart = [];
-
         foreach ($recentActivities as $act) {
             $sport = $act['sport'] ?: 'Autre';
             $act['premium'] = json_decode($act['raw_data'], true);
@@ -63,43 +61,45 @@ class Dashboard extends BaseController
                 $stravaId = $act['strava_activity_id'];
                 
                 $act['local_volume'] = $tonnageByDate[$dateKey] ?? null;
-                $act['local_workout_id'] = $localWorkoutIdsByStrava[$stravaId] ?? ($localWorkoutIdsByDate[$dateKey] ?? null); 
+                $act['local_workout_id'] = $localWorkoutIdsByStrava[$stravaId] ?? ($localWorkoutIdsByDate[$dateKey] ?? null);
+                
                 $recentWorkouts[] = $act;
-                continue; 
+                continue;
             }
 
-            // Ignorer les activités génériques sans distance (ex: "Workout" soirée à 0 km)
             if ($sport === 'Workout' && (float) $act['distance_meters'] <= 0) {
                 continue;
             }
-             
-            // Normalisation des noms de sports
-            if ($sport === 'Ride' || $sport === 'VirtualRide' || $sport === 'Bike') $sport = 'Vélo';
-            elseif (stripos($sport, 'Run') !== false) $sport = 'Course à pied';
-            elseif (stripos($sport, 'Swim') !== false || $sport === 'Open Water') $sport = 'Natation';
-            elseif ($sport === 'Walk' || $sport === 'Hike') $sport = 'Marche';
-
-            $activitiesBySport[$sport][] = $act;
-
+            
+            $sportTraduit = $tradModel->getTrad($sport) ?? $sport;
+            
+            $activitiesBySport[$sportTraduit][] = $act;
             $rawActivitiesForChart[] = [
-                'sport'    => $sport,
+                'sport'    => $sportTraduit,
                 'date'     => date('Y-m', strtotime($act['started_at'])),
                 'distance' => (float) $act['distance_meters']
             ];
         }
 
         $monthlyDistance = $activityModel->getMonthlyDistance($userId, 6);
+        $currentMonthStats = $activityModel->getCurrentMonthStats($userId);
+        
+        foreach ($currentMonthStats as &$monthStat) {
+            $sport = $monthStat['sport'] ?: 'Autre';
+            $monthStat['sport_trad'] = $tradModel->getTrad($sport) ?? $sport;
+        }
+        unset($monthStat);
 
         $data = [
             'title'                 => 'Tableau de bord Global',
             'userSettings'          => $userSettings,
             'statsBySport'          => $activityModel->getStatsBySport($userId),
-            'currentMonthStats'     => $activityModel->getCurrentMonthStats($userId),
+            'currentMonthStats'     => $currentMonthStats,
             'activitiesBySport'     => $activitiesBySport,
             'monthlyDistance'       => $monthlyDistance,
             'rawActivitiesForChart' => $rawActivitiesForChart,
             'tonnageData'           => $tonnageData,
-            'recentWorkouts'        => array_slice($recentWorkouts, 0, 5), // Garde les 5 plus récentes à l'affichage
+            'recentWorkouts'        => array_slice($recentWorkouts, 0, 5),
         ];
 
         return view('dashboard/index', $data);
@@ -110,37 +110,36 @@ class Dashboard extends BaseController
         $userId = auth()->id();
         $activityModel = new ActivityModel();
         $tradModel = new TradModel();
+        
         $activities = $activityModel->getActivitiesSince($userId);
         $globalStats = $activityModel->getStatsBySport($userId);
-        $sport = null;
 
         if (empty($activities)) {
             $activities = [];
         }
-
+        
         if ($activities) {
-            // Normalisation des noms de sports
             foreach ($activities as &$activity) {
                 $sport = $activity['sport'] ?: 'Autre';
-                $activity['sport'] = $tradModel->getTrad($sport) ?? "$sport";
+                $activity['sport'] = $tradModel->getTrad($sport) ?? "$sport (non traduit)";
             }
-            unset($activity); // Toujours détruire la référence après la boucle
+            unset($activity);
         }
 
         if ($globalStats) {
             foreach ($globalStats as &$global) {
                 $sport = $global['sport'] ?: 'Autre';
-                $global['sport'] = $tradModel->getTrad($sport) ?? "$sport";
+                $global['sport'] = $tradModel->getTrad($sport) ?? "$sport (non traduit)";
             }
             unset($global);
         }
-
+        
         $data = [
             'title'      => 'Historique des Activités',
             'globalStats' => $globalStats,
             'activities' => $activities,
         ];
-
+        
         return view('dashboard/activities', $data);
     }
 }

@@ -88,7 +88,6 @@ if (!function_exists('formatTime')) {
 </head>
 
 <body>
-
     <nav class="navbar navbar-light bg-white border-bottom mb-4">
         <div class="container">
             <a class="navbar-brand fw-bold" href="<?= site_url('/') ?>">Tableau de Bord</a>
@@ -99,10 +98,8 @@ if (!function_exists('formatTime')) {
                     <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 150 48" width="200" height="32"
                         style="border-radius: 4px; display: block;">
                         <rect width="230" height="48" rx="4" fill="#fc4c02" />
-                        <!-- Logo Strava officiel -->
                         <path fill="#ffffff" d="M25.7 11.2l-7.8 15.4h4.6l3.2-6.4 3.2 6.4h4.6l-7.8-15.4z" />
                         <path fill="#fda580" d="M31.4 26.6l-3.2 6.4-3.2-6.4h-3.5l6.7 13.2 6.7-13.2h-3.5z" />
-                        <!-- Texte officiel -->
                         <text x="50" y="29" fill="#ffffff"
                             font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Arial, sans-serif"
                             font-size="13" font-weight="700" letter-spacing="0.4">CONNECT WITH STRAVA</text>
@@ -116,7 +113,6 @@ if (!function_exists('formatTime')) {
             </div>
         </div>
     </nav>
-
     <main class="container">
         <?php if (session()->getFlashdata('success')): ?>
         <div class="alert alert-success alert-dismissible fade show"><?= esc(session()->getFlashdata('success')) ?>
@@ -148,209 +144,201 @@ if (!function_exists('formatTime')) {
         </div>
         <?php else: ?>
         <div class="alert alert-info border-0 shadow-sm">
-            🔗 <strong>Strava n'est pas connecté.</strong> Cliquez sur "Connecter Strava" en haut à droite pour lier
+            <strong>Strava n'est pas connecté.</strong> Cliquez sur "Connecter Strava" en haut à droite pour lier
             votre compte.
         </div>
         <?php endif; ?>
+
         <?php if (empty($activitiesBySport) && empty($recentWorkouts)): ?>
         <div class="alert alert-info border-0 shadow-sm">
-            📌 <strong>Aucune activité récente.</strong> Connectez Strava et importez vos activités pour voir vos
+            <strong>Aucune activité récente.</strong> Connectez Strava et importez vos activités pour voir vos
             statistiques ici.
-            <?php else: ?>
-            <?php if (empty($activitiesBySport)): ?>
-            <?php else: ?>
-            <!-- SECTION 1 : CARDIO & ENDURANCE (STRAVA) -->
-            <div class="mb-5">
-                <h2 class="h4 border-bottom pb-2 text-strava fw-bold">🏃‍♂️ Cardio & Endurance</h2>
-
-                <div class="row g-3 mb-4 mt-2">
-                    <div class="col-12">
-                        <div class="card border-0 shadow-sm">
-                            <div class="card-body py-3">
-                                <h3 class="h6 fw-bold mb-3 text-muted">🎯 Objectifs mensuels</h3>
-                                <div class="row g-4">
-                                    <?php foreach ($currentMonthStats as $monthStat): ?>
-                                    <?php
-                                if ($monthStat['sport'] === 'WeightTraining')
-                                    continue;
-                                $sportName = $monthStat['sport'];
-                                $goalDist = 20000;
-
-                                if ($sportName === 'Ride' || $sportName === 'VirtualRide') {
-                                    $sportName = 'Vélo';
-                                    $goalDist = ($userSettings['goal_ride_km'] ?? 300) * 1000;
-                                } elseif ($sportName === 'Run') {
-                                    $sportName = 'Course à pied';
-                                    $goalDist = ($userSettings['goal_run_km'] ?? 60) * 1000;
-                                } elseif ($sportName === 'Swim') {
-                                    $sportName = 'Natation';
-                                    $goalDist = ($userSettings['goal_swim_km'] ?? 20) * 1000;
-                                } elseif ($sportName === 'Walk') {
-                                    $sportName = 'Marche';
-                                    $goalDist = ($userSettings['goal_walk_km'] ?? 20) * 1000;
-                                }
-                                $progress = min(100, ($monthStat['total_distance'] / max(1, $goalDist)) * 100);
-                                ?>
-                                    <div class="col-12 col-md-6 col-xl-3">
-                                        <div class="d-flex justify-content-between mb-1">
-                                            <span
-                                                class="fw-semibold condensed-text text-uppercase"><?= esc($sportName) ?></span>
-                                            <span
-                                                class="condensed-text fw-bold text-dark"><?= formatDist($monthStat['total_distance']) ?>
-                                                / <?= formatDist($goalDist) ?></span>
-                                        </div>
-                                        <div class="progress" style="height: 6px;">
-                                            <div class="progress-bar bg-strava" style="width: <?= $progress ?>%"></div>
-                                        </div>
-                                        <div class="text-muted condensed-text mt-1">
-                                            <?= formatTime($monthStat['total_time']) ?></div>
+        </div>
+        <?php else: ?>
+        <?php if (!empty($activitiesBySport)): ?>
+        <!-- SECTION 1 : CARDIO & ENDURANCE (STRAVA) -->
+        <div class="mb-5">
+            <h2 class="h4 border-bottom pb-2 text-strava fw-bold"> Cardio & Endurance</h2>
+            <div class="row g-3 mb-4 mt-2">
+                <div class="col-12">
+                    <div class="card border-0 shadow-sm">
+                        <div class="card-body py-3">
+                            <h3 class="h6 fw-bold mb-3 text-muted"> Objectifs mensuels</h3>
+                            <div class="row g-4">
+                                <?php foreach ($currentMonthStats as $monthStat): ?>
+                                <?php
+                                    if ($monthStat['sport'] === 'WeightTraining') continue;
+                                    
+                                    $sportBase = $monthStat['sport'];
+                                    $sportName = $monthStat['sport_trad'] ?? $sportBase;
+                                    $goalDist = 20000;
+                                    
+                                    if ($sportBase === 'Ride' || $sportBase === 'VirtualRide' || $sportBase === 'Bike') {
+                                        $goalDist = ($userSettings['goal_ride_km'] ?? 300) * 1000;
+                                    } elseif (stripos($sportBase, 'Run') !== false) {
+                                        $goalDist = ($userSettings['goal_run_km'] ?? 60) * 1000;
+                                    } elseif (stripos($sportBase, 'Swim') !== false || $sportBase === 'Open Water') {
+                                        $goalDist = ($userSettings['goal_swim_km'] ?? 20) * 1000;
+                                    } elseif ($sportBase === 'Walk' || $sportBase === 'Hike') {
+                                        $goalDist = ($userSettings['goal_walk_km'] ?? 20) * 1000;
+                                    }
+                                    
+                                    $progress = min(100, ($monthStat['total_distance'] / max(1, $goalDist)) * 100);
+                                    ?>
+                                <div class="col-12 col-md-6 col-xl-3">
+                                    <div class="d-flex justify-content-between mb-1">
+                                        <span
+                                            class="fw-semibold condensed-text text-uppercase"><?= esc($sportName) ?></span>
+                                        <span
+                                            class="condensed-text fw-bold text-dark"><?= formatDist($monthStat['total_distance']) ?>
+                                            / <?= formatDist($goalDist) ?></span>
                                     </div>
-                                    <?php endforeach; ?>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-
-                <div class="row g-4">
-                    <div class="col-12 col-xl-6">
-                        <div class="row g-2">
-
-                            <?php foreach ($activitiesBySport as $sport => $acts): ?>
-                            <div class="col-12 col-md-6">
-                                <div class="card h-100 shadow-sm border-0">
-                                    <div class="card-header bg-white fw-bold d-flex justify-content-between py-2">
-                                        <span class="condensed-text"><?= esc($sport) ?></span>
-                                        <span class="badge bg-light text-dark border condensed-text">5 réc.</span>
+                                    <div class="progress" style="height: 6px;">
+                                        <div class="progress-bar bg-strava" style="width: <?= $progress ?>%"></div>
                                     </div>
-                                    <div class="list-group list-group-flush">
-                                        <?php foreach (array_slice($acts, 0, 5) as $activity): ?>
-                                        <div class="list-group-item">
-                                            <a href="https://www.strava.com/activities/<?= esc($activity['strava_activity_id']) ?>"
-                                                target="_blank"
-                                                class="fw-semibold text-truncate condensed-text text-dark text-decoration-none d-block">
-                                                <?= esc($activity['name']) ?>
-                                            </a>
-                                            <div
-                                                class="d-flex justify-content-between align-items-center condensed-text mt-1">
-                                                <span
-                                                    class="text-muted"><?= date('d/m/y', strtotime($activity['started_at'])) ?></span>
-                                                <span
-                                                    class="fw-bold text-dark"><?= formatDist($activity['distance_meters']) ?></span>
-                                            </div>
-                                        </div>
-                                        <?php endforeach ?>
+                                    <div class="text-muted condensed-text mt-1">
+                                        <?= formatTime($monthStat['total_time']) ?>
                                     </div>
                                 </div>
-                            </div>
-                            <?php endforeach ?>
-                        </div>
-                    </div>
-
-                    <!-- GRAPHIQUE STRAVA AVEC FILTRE PAR SPORT -->
-                    <div class="col-12 col-xl-6">
-                        <div class="card h-100">
-                            <div class="card-body">
-                                <div class="d-flex justify-content-between align-items-center mb-3">
-                                    <h3 class="h6 fw-bold mb-0 text-muted">Progression des Activités</h3>
-                                    <!-- Sélecteur de sport (Style Strava) -->
-                                    <select id="sportFilter"
-                                        class="form-select form-select-sm w-auto fw-semibold text-strava border-strava"
-                                        onchange="updateStravaChart()">
-                                        <option value="all">Tous les sports</option>
-                                        <option value="Vélo">Vélo</option>
-                                        <option value="Course à pied">Course à pied</option>
-                                        <option value="Natation">Natation</option>
-                                        <option value="Marche">Marche</option>
-                                    </select>
-                                </div>
-                                <div style="height: 250px; position: relative;">
-                                    <canvas id="stravaStyleChart"></canvas>
-                                </div>
-                                <div class="text-end mt-1">
-                                    <span class=" small fw-bold" style="color: #fc4c02; font-size: 0.75rem;">POWERED BY
-                                        STRAVA</span>
-                                </div>
+                                <?php endforeach; ?>
                             </div>
                         </div>
                     </div>
                 </div>
             </div>
-            <?php endif; ?>
-            <?php endif; ?>
-
-            <?php if (empty($recentWorkouts)): ?>
-            <?php else: ?>
-            <!-- Section Musculation -->
-            <div class="mb-5">
-                <div style="display: flex; justify-content: space-between; align-items: flex-start;">
-                    <h2 class="h4 pb-2 mb-4 section-title">🏋️‍♂️ Renforcement & Musculation</h2>
-                    <a class="btn btn-outline-success btn-sm" href="<?= site_url('strength') ?>">Progression Muscu</a>
-                </div>
-                <div class="row g-4">
-                    <div class="col-12 col-md-6">
-                        <div class="card h-100">
-                            <div class="card-body">
-                                <h3 class="h6 fw-bold mb-3 text-muted">Évolution du Tonnage</h3>
-                                <?php if (empty($tonnageData)): ?>
-                                <p class="text-muted small">Aucune donnée de tonnage.</p>
-                                <?php else: ?>
-                                <div style="height: 250px;"><canvas id="tonnageChart"></canvas></div>
-                                <?php endif ?>
-                            </div>
-                        </div>
-                    </div>
-
-                    <div class="col-12 col-md-6">
-                        <div class="card h-100">
-                            <div class="card-body p-0">
-                                <div class="p-3 pb-2 border-bottom">
-                                    <h3 class="h6 fw-bold mb-0 text-muted">Séances de force récentes</h3>
+            <div class="row g-4">
+                <div class="col-12 col-xl-6">
+                    <div class="row g-2">
+                        <?php foreach ($activitiesBySport as $sport => $acts): ?>
+                        <div class="col-12 col-md-6">
+                            <div class="card h-100 shadow-sm border-0">
+                                <div class="card-header bg-white fw-bold d-flex justify-content-between py-2">
+                                    <span class="condensed-text"><?= esc($sport) ?></span>
+                                    <span class="badge bg-light text-dark border condensed-text">5 réc.</span>
                                 </div>
                                 <div class="list-group list-group-flush">
-                                    <?php foreach ($recentWorkouts as $workout): ?>
-                                    <?php
-                                $stravaId = $workout['strava_activity_id'];
-                                $workoutId = $workout['local_workout_id'] ?? $stravaId;
-                                ?>
-                                    <div class="list-group-item py-2">
-                                        <div class="d-flex justify-content-between align-items-start mb-1">
-                                            <a href="<?= site_url('workout/' . $workoutId) ?>"
-                                                class="fw-semibold workout-link text-truncate condensed-text pe-2"
-                                                style="max-width: 80%;">
-                                                <?= esc($workout['name']) ?>
-                                            </a>
+                                    <?php foreach (array_slice($acts, 0, 5) as $activity): ?>
+                                    <div class="list-group-item">
+                                        <a href="https://www.strava.com/activities/<?= esc($activity['strava_activity_id']) ?>"
+                                            target="_blank"
+                                            class="fw-semibold text-truncate condensed-text text-dark text-decoration-none d-block">
+                                            <?= esc($activity['name']) ?>
+                                        </a>
+                                        <div
+                                            class="d-flex justify-content-between align-items-center condensed-text mt-1">
                                             <span
-                                                class="condensed-text fw-bold text-dark text-nowrap"><?= formatTime($workout['duration_seconds']) ?></span>
-                                        </div>
-                                        <div class="d-flex align-items-center gap-2 condensed-text">
+                                                class="text-muted"><?= date('d/m/y', strtotime($activity['started_at'])) ?></span>
                                             <span
-                                                class="text-muted pe-2 border-end"><?= date('d/m', strtotime($workout['started_at'])) ?></span>
-                                            <?php if (isset($workout['local_volume'])): ?>
-                                            <span class="badge bg-success text-white rounded-pill"
-                                                style="font-size:0.75rem;">🏋️‍♂️
-                                                <?= number_format($workout['local_volume'], 0, ',', ' ') ?>
-                                                kg</span>
-                                            <?php else: ?>
-                                            <span class="badge bg-light text-secondary border rounded-pill"
-                                                style="font-size:0.75rem;">0 kg</span>
-                                            <?php endif; ?>
+                                                class="fw-bold text-dark"><?= formatDist($activity['distance_meters']) ?></span>
                                         </div>
                                     </div>
                                     <?php endforeach ?>
                                 </div>
                             </div>
                         </div>
+                        <?php endforeach ?>
+                    </div>
+                </div>
+
+                <!-- GRAPHIQUE STRAVA AVEC FILTRE PAR SPORT -->
+                <div class="col-12 col-xl-6">
+                    <div class="card h-100">
+                        <div class="card-body">
+                            <div class="d-flex justify-content-between align-items-center mb-3">
+                                <h3 class="h6 fw-bold mb-0 text-muted">Progression des Activités</h3>
+                                <!-- Sélecteur de sport (Style Strava) -->
+                                <select id="sportFilter"
+                                    class="form-select form-select-sm w-auto fw-semibold text-strava border-strava"
+                                    onchange="updateStravaChart()">
+                                    <option value="all">Tous les sports</option>
+                                    <?php foreach (array_keys($activitiesBySport) as $sName): ?>
+                                    <option value="<?= esc($sName) ?>"><?= esc($sName) ?></option>
+                                    <?php endforeach; ?>
+                                </select>
+                            </div>
+                            <div style="height: 250px; position: relative;">
+                                <canvas id="stravaStyleChart"></canvas>
+                            </div>
+                            <div class="text-end mt-1">
+                                <span class="small fw-bold" style="color: #fc4c02; font-size: 0.75rem;">POWERED BY
+                                    STRAVA</span>
+                            </div>
+                        </div>
                     </div>
                 </div>
             </div>
-            <?php endif ?>
-    </main>
+        </div>
+        <?php endif; ?>
 
+        <?php if (!empty($recentWorkouts)): ?>
+        <!-- Section Musculation -->
+        <div class="mb-5">
+            <div style="display: flex; justify-content: space-between; align-items: flex-start;">
+                <h2 class="h4 pb-2 mb-4 section-title"> Renforcement & Musculation</h2>
+                <a class="btn btn-outline-success btn-sm" href="<?= site_url('strength') ?>">Progression Muscu</a>
+            </div>
+            <div class="row g-4">
+                <div class="col-12 col-md-6">
+                    <div class="card h-100">
+                        <div class="card-body">
+                            <h3 class="h6 fw-bold mb-3 text-muted">Évolution du Tonnage</h3>
+                            <?php if (empty($tonnageData)): ?>
+                            <p class="text-muted small">Aucune donnée de tonnage.</p>
+                            <?php else: ?>
+                            <div style="height: 250px;"><canvas id="tonnageChart"></canvas></div>
+                            <?php endif ?>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-12 col-md-6">
+                    <div class="card h-100">
+                        <div class="card-body p-0">
+                            <div class="p-3 pb-2 border-bottom">
+                                <h3 class="h6 fw-bold mb-0 text-muted">Séances de force récentes</h3>
+                            </div>
+                            <div class="list-group list-group-flush">
+                                <?php foreach ($recentWorkouts as $workout): ?>
+                                <?php
+                                    $stravaId = $workout['strava_activity_id'];
+                                    $workoutId = $workout['local_workout_id'] ?? $stravaId;
+                                    ?>
+                                <div class="list-group-item py-2">
+                                    <div class="d-flex justify-content-between align-items-start mb-1">
+                                        <a href="<?= site_url('workout/' . $workoutId) ?>"
+                                            class="fw-semibold workout-link text-truncate condensed-text pe-2"
+                                            style="max-width: 80%;">
+                                            <?= esc($workout['name']) ?>
+                                        </a>
+                                        <span
+                                            class="condensed-text fw-bold text-dark text-nowrap"><?= formatTime($workout['duration_seconds']) ?></span>
+                                    </div>
+                                    <div class="d-flex align-items-center gap-2 condensed-text">
+                                        <span
+                                            class="text-muted pe-2 border-end"><?= date('d/m', strtotime($workout['started_at'])) ?></span>
+                                        <?php if (isset($workout['local_volume'])): ?>
+                                        <span class="badge bg-success text-white rounded-pill"
+                                            style="font-size:0.75rem;">
+                                            <?= number_format($workout['local_volume'], 0, ',', ' ') ?> kg
+                                        </span>
+                                        <?php else: ?>
+                                        <span class="badge bg-light text-secondary border rounded-pill"
+                                            style="font-size:0.75rem;">0 kg</span>
+                                        <?php endif; ?>
+                                    </div>
+                                </div>
+                                <?php endforeach ?>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <?php endif ?>
+        <?php endif; ?>
+    </main>
     <script>
     Chart.defaults.maintainAspectRatio = false;
 
-    // Données brutes injectées depuis PHP pour le filtrage dynamique
     const allActivities = <?= json_encode($rawActivitiesForChart ?? []) ?>;
     const defaultLabels = <?= json_encode(array_column($monthlyDistance ?? [], 'month_key')) ?>;
     const defaultValues =
@@ -410,12 +398,10 @@ if (!function_exists('formatTime')) {
         }
     });
 
-    // Fonction de filtrage dynamique du graphique au changement du select
     function updateStravaChart() {
         const selectedSport = document.getElementById('sportFilter').value;
-
         let filteredDataByMonth = {};
-        // Initialiser les mois par défaut à 0
+
         defaultLabels.forEach(label => {
             filteredDataByMonth[label] = 0;
         });
@@ -429,16 +415,13 @@ if (!function_exists('formatTime')) {
         });
 
         const newValues = defaultLabels.map(label => Math.round(filteredDataByMonth[label] * 100) / 100);
-
         stravaChart.data.datasets[0].data = newValues;
         stravaChart.update();
     }
 
-    // Graphique Tonnage Musculation
     <?php if (!empty($tonnageData)): ?>
     const tonnageLabels = <?= json_encode(array_column($tonnageData, 'workout_date')) ?>;
     const tonnageValues = <?= json_encode(array_column($tonnageData, 'total_volume_kg')) ?>;
-
     const maxTon = Math.max(...tonnageValues);
     const suggestedMaxTon = maxTon > 0 ? maxTon * 1.2 : 100;
 
