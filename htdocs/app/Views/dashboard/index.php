@@ -90,6 +90,15 @@ if (!function_exists('formatTime')) {
     </div>
     <?php endif; ?>
 
+    <?php if (empty($activitiesBySport)): ?>
+                        <div class="col-12">
+                            <div class="card h-100 shadow-sm border-0">
+                                <div class="card-body d-flex justify-content-center align-items-center" style="height: 250px;">
+                                    <p class="text-muted text-center small">Aucune activité Strava récente.</p>
+                                </div>
+                            </div>
+                        </div>
+                    <?php else: ?>
     <!-- SECTION 1 : CARDIO & ENDURANCE (STRAVA) -->
     <div class="mb-5">
         <h2 class="h4 border-bottom pb-2 text-strava fw-bold">🏃‍♂️ Cardio & Endurance</h2>
@@ -141,9 +150,7 @@ if (!function_exists('formatTime')) {
         <div class="row g-4">
             <div class="col-12 col-xl-6">
                 <div class="row g-2">
-                    <?php if (empty($activitiesBySport)): ?>
-                        <div class="col-12"><p class="text-muted">Aucune activité cardio.</p></div>
-                    <?php else: ?>
+                    
                         <?php foreach ($activitiesBySport as $sport => $acts): ?>
                             <div class="col-12 col-md-6">
                                 <div class="card h-100 shadow-sm border-0">
@@ -167,7 +174,6 @@ if (!function_exists('formatTime')) {
                                 </div>
                             </div>
                         <?php endforeach ?>
-                    <?php endif; ?>
                 </div>
             </div>
 
@@ -254,6 +260,7 @@ if (!function_exists('formatTime')) {
             </div>
         </div>
     </div>
+    <?php endif; ?>
 </main>
 
 <script>
