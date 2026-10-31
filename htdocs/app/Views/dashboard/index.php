@@ -109,7 +109,6 @@ if (!function_exists('formatTime')) {
                     </svg>
                 </a>
                 <?php endif; ?>
-                <a class="btn btn-outline-success btn-sm" href="<?= site_url('strength') ?>">Progression Muscu</a>
                 <a class="btn btn-outline-secondary btn-sm" href="<?= site_url('profile') ?>">Mon Profil
                     (<?= esc(auth()->user()->username ?? 'User') ?>)</a>
                 <a class="btn btn-danger btn-sm" href="<?= site_url('logout') ?>">Déconnexion</a>
@@ -283,7 +282,10 @@ if (!function_exists('formatTime')) {
             <?php else: ?>
             <!-- Section Musculation -->
             <div class="mb-5">
-                <h2 class="h4 border-bottom pb-2 mb-4 section-title">🏋️‍♂️ Renforcement & Musculation</h2>
+                <div style="display: flex; justify-content: space-between; align-items: flex-start;">
+                    <h2 class="h4 pb-2 mb-4 section-title">🏋️‍♂️ Renforcement & Musculation</h2>
+                    <a class="btn btn-outline-success btn-sm" href="<?= site_url('strength') ?>">Progression Muscu</a>
+                </div>
                 <div class="row g-4">
                     <div class="col-12 col-md-6">
                         <div class="card h-100">
@@ -326,7 +328,8 @@ if (!function_exists('formatTime')) {
                                             <?php if (isset($workout['local_volume'])): ?>
                                             <span class="badge bg-success text-white rounded-pill"
                                                 style="font-size:0.75rem;">🏋️‍♂️
-                                                <?= number_format($workout['local_volume'], 0, ',', ' ') ?> kg</span>
+                                                <?= number_format($workout['local_volume'], 0, ',', ' ') ?>
+                                                kg</span>
                                             <?php else: ?>
                                             <span class="badge bg-light text-secondary border rounded-pill"
                                                 style="font-size:0.75rem;">0 kg</span>
