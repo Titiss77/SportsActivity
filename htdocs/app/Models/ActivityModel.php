@@ -1,6 +1,4 @@
-<?php
-
-namespace App\Models;
+<?php namespace App\Models;
 
 use CodeIgniter\Model;
 
@@ -38,9 +36,6 @@ class ActivityModel extends Model
                     ->findAll(max(1, min($limit, 500)));
     }
 
-    /**
-     * Récupère tout l'historique sur X mois complets (sans limite de 100 lignes)
-     */
     public function getActivitiesSince(int $userId): array
     {
         $sql = "
@@ -58,10 +53,10 @@ class ActivityModel extends Model
                    COUNT(*) AS total_activities, 
                    ROUND(SUM(distance_meters)/1000, 2) AS total_distance, 
                    CONCAT(
-                        FLOOR(COALESCE(SUM(duration_seconds), 0) / 3600), 'h ',
-                        FLOOR((COALESCE(SUM(duration_seconds), 0) % 3600) / 60), 'min ',
-                        COALESCE(SUM(duration_seconds), 0) % 60, 's'
-                    ) AS total_duration
+                       FLOOR(COALESCE(SUM(duration_seconds), 0) / 3600), 'h ',
+                       FLOOR((COALESCE(SUM(duration_seconds), 0) % 3600) / 60), 'min ',
+                       COALESCE(SUM(duration_seconds), 0) % 60, 's'
+                   ) AS total_duration
             FROM strava_activities
             WHERE user_id = ?
             GROUP BY sport
@@ -74,9 +69,9 @@ class ActivityModel extends Model
     {
         $sql = "
             SELECT 
-                COUNT(*) AS total_activities, 
-                ROUND(SUM(distance_meters)/1000, 2) AS total_distance, 
-                CONCAT(
+                 COUNT(*) AS total_activities, 
+                 ROUND(SUM(distance_meters)/1000, 2) AS total_distance, 
+                 CONCAT(
                     FLOOR(COALESCE(SUM(duration_seconds), 0) / 3600), 'h ',
                     FLOOR((COALESCE(SUM(duration_seconds), 0) % 3600) / 60), 'min ',
                     COALESCE(SUM(duration_seconds), 0) % 60, 's'
@@ -94,7 +89,7 @@ class ActivityModel extends Model
             SELECT DATE_FORMAT(started_at, '%Y-%m') AS month_key,
                    COALESCE(SUM(distance_meters), 0) AS distance_meters
             FROM strava_activities
-            WHERE user_id = ? 
+            WHERE user_id = ?
               AND sport NOT IN ('WeightTraining', 'Workout')
               AND started_at >= DATE_FORMAT(DATE_SUB(CURDATE(), INTERVAL ? MONTH), '%Y-%m-01')
             GROUP BY DATE_FORMAT(started_at, '%Y-%m')
@@ -127,8 +122,8 @@ class ActivityModel extends Model
                    COALESCE(SUM(distance_meters), 0) AS total_distance,
                    COALESCE(SUM(duration_seconds), 0) AS total_time
             FROM strava_activities
-            WHERE user_id = ? 
-              AND MONTH(started_at) = MONTH(CURDATE()) 
+            WHERE user_id = ?
+              AND MONTH(started_at) = MONTH(CURDATE())
               AND YEAR(started_at) = YEAR(CURDATE())
             GROUP BY sport
         ";
