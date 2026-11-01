@@ -149,12 +149,14 @@ class Strava extends BaseController
                 foreach ($activities as $stravaActivity) {
                     $stravaId = (string) $stravaActivity['id'];
                     $fetchedStravaIds[] = $stravaId;
+                    
+                    $sportBase = $stravaActivity['sport_type'] ?? ($stravaActivity['type'] ?? 'Inconnu');
 
                     $activityData = [
                         'user_id'                 => $userId,
                         'strava_activity_id'      => $stravaId,
                         'name'                    => $stravaActivity['name'] ?? 'Activité Strava',
-                        'sport'                   => $stravaActivity['sport_type'] ?? ($stravaActivity['type'] ?? 'Inconnu'),
+                        'sport'                   => $sportBase,
                         'started_at'              => date('Y-m-d H:i:s', strtotime($stravaActivity['start_date_local'])),
                         'duration_seconds'        => $stravaActivity['moving_time'] ?? ($stravaActivity['elapsed_time'] ?? 0),
                         'distance_meters'         => $stravaActivity['distance'] ?? 0,
@@ -175,8 +177,7 @@ class Strava extends BaseController
 
             $deletedCount = 0;
 
-            // SÉCURITÉ : Si l'API Strava a renvoyé une liste vide d'IDs (zéro activité récupérée)
-            // On vérifie s'il y a des données locales sur cette même période.
+            // SÉCURITÉ : Anti-vidage
             if (empty($fetchedStravaIds)) {
                 $localCount = $activityModel->where('user_id', $userId)
                                             ->where('started_at >=', $startDate . ' 00:00:00')
@@ -187,11 +188,10 @@ class Strava extends BaseController
                     return redirect()->to('/')->with('success', "Synchronisation terminée. 0 activité importée. La suppression de vos {$localCount} activités locales a été annulée par sécurité car Strava n'a renvoyé aucune donnée.");
                 }
             } else {
-                // Nettoyage standard si l'API a bien répondu avec des éléments
                 $deletedCount = $activityModel->deleteMissingActivities($userId, $startDate, $endDate, $fetchedStravaIds);
             }
 
-            return redirect()->to('/')->with('success', "Synchronisation terminée. {$importedCount} activités importées. {$deletedCount} supprimées.");
+            return redirect()->to('/')->with('success', "Synchronisation terminée. {$importedCount} activités importées ou mises à jour. {$deletedCount} supprimées.");
 
         } catch (\Exception $e) {
             return redirect()->to('/')->with('error', 'Erreur lors de la synchronisation : ' . $e->getMessage());

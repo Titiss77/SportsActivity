@@ -190,34 +190,6 @@ class ActivityModel extends Model
         ];
     }
 
-    public function getSportDetails(int $userId): array
-    {
-        return [
-            'Course à pied' => [
-                'records' => [
-                    '400 m' => '1:10',
-                    '1/2 mille' => '2:47',
-                    '1 km' => '4:24',
-                    '1 mille' => '7:19',
-                    '2 milles' => '15:02',
-                    '5 km' => '23:21',
-                    '10 km' => '53:52',
-                    '15 km' => '1:19:59',
-                    '10 milles' => '1:31:54',
-                    '20 km' => '1:57:20',
-                    'Semi-marathon' => '2:03:48'
-                ],
-                'zones' => [
-                    'Z5' => ['percent' => 1, 'range' => '>179 ppm', 'color' => '#b30000'],
-                    'Z4' => ['percent' => 13, 'range' => '170 - 178 ppm', 'color' => '#dc2626'],
-                    'Z3' => ['percent' => 39, 'range' => '155 - 169 ppm', 'color' => '#ef4444'],
-                    'Z2' => ['percent' => 42, 'range' => '137 - 154 ppm', 'color' => '#f87171'],
-                    'Z1' => ['percent' => 5, 'range' => '<136 ppm', 'color' => '#fca5a5']
-                ]
-            ]
-        ];
-    }
-
     public function deleteMissingActivities(int $userId, string $startDate, string $endDate, array $keptStravaIds): int
     {
         $builder = $this->where('user_id', $userId)

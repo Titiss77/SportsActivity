@@ -95,7 +95,6 @@ class Dashboard extends BaseController
 
         $muscleHeatmap = $strengthModel->getMuscleHeatmap($userId, 15);
         $streakStats = $activityModel->getStreakStats($userId);
-        $sportDetails = $activityModel->getSportDetails($userId);
 
         $data = [
             'title'                 => 'Tableau de bord Global',
@@ -109,7 +108,6 @@ class Dashboard extends BaseController
             'recentWorkouts'        => array_slice($recentWorkouts, 0, 5),
             'muscleHeatmap'         => $muscleHeatmap,
             'streakStats'           => $streakStats,
-            'sportDetails'          => $sportDetails,
         ];
 
         return view('dashboard/index', $data);

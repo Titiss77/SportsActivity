@@ -87,61 +87,12 @@ if (!function_exists('formatTime')) {
         font-size: 0.85rem;
     }
 
-    /* Styles pour la modal des records et zones */
-    .zone-bar-container {
-        display: flex;
-        align-items: center;
-        margin-bottom: 8px;
-    }
-
-    .zone-label {
-        width: 30px;
+    .readiness-badge {
+        font-size: 1.25rem;
         font-weight: bold;
-    }
-
-    .zone-bar-wrapper {
-        flex-grow: 1;
-        background: transparent;
-        height: 24px;
-        margin: 0 10px;
-        display: flex;
-        align-items: center;
-    }
-
-    .zone-bar {
-        height: 100%;
-        border-radius: 4px;
-        display: flex;
-        align-items: center;
-        padding-left: 8px;
+        padding: 10px 15px;
+        border-radius: 8px;
         color: white;
-        font-weight: bold;
-        font-size: 0.8rem;
-    }
-
-    .zone-percent {
-        width: 45px;
-        text-align: right;
-        font-weight: bold;
-    }
-
-    .zone-range {
-        font-size: 0.75rem;
-        color: #6c757d;
-        text-align: right;
-        margin-top: -5px;
-        margin-bottom: 10px;
-    }
-
-    .record-item {
-        display: flex;
-        justify-content: space-between;
-        padding: 12px 0;
-        border-bottom: 1px solid #eee;
-    }
-
-    .record-item:last-child {
-        border-bottom: none;
     }
     </style>
 </head>
@@ -224,17 +175,13 @@ if (!function_exists('formatTime')) {
                 <div class="col-12 col-xl-6">
                     <div class="row g-2">
                         <?php foreach ($activitiesBySport as $sport => $acts): ?>
-                        <?php $modalId = "modal" . md5($sport); ?>
                         <div class="col-12 col-md-6">
                             <div class="card h-100 shadow-sm border-0">
                                 <div
                                     class="card-header bg-white fw-bold d-flex justify-content-between align-items-center py-2">
                                     <span class="condensed-text"><?= esc($sport) ?></span>
-                                    <!-- Modification : Bouton cliquable pour ouvrir la modale -->
-                                    <button class="btn btn-sm btn-light border condensed-text" data-bs-toggle="modal"
-                                        data-bs-target="#<?= $modalId ?>">
-                                        <?= count($acts) ?> réc.
-                                    </button>
+                                    <span class="badge bg-light text-dark border condensed-text"><?= count($acts) ?>
+                                        réc.</span>
                                 </div>
                                 <div class="list-group list-group-flush">
                                     <?php foreach (array_slice($acts, 0, 5) as $activity): ?>
@@ -256,61 +203,6 @@ if (!function_exists('formatTime')) {
                                 </div>
                             </div>
                         </div>
-
-                        <!-- MODAL STATISTIQUES POUR LE SPORT -->
-                        <div class="modal fade" id="<?= $modalId ?>" tabindex="-1" aria-hidden="true">
-                            <div class="modal-dialog modal-dialog-centered">
-                                <div class="modal-content border-0 shadow">
-                                    <div class="modal-header border-0 pb-0">
-                                        <h5 class="modal-title fw-bold">Statistiques : <?= esc($sport) ?></h5>
-                                        <button type="button" class="btn-close" data-bs-dismiss="modal"
-                                            aria-label="Close"></button>
-                                    </div>
-                                    <div class="modal-body pt-3">
-                                        <?php if (isset($sportDetails[$sport])): ?>
-                                        <!-- Section Zones Cardiaques -->
-                                        <h6 class="fw-bold text-muted mb-3 text-uppercase" style="font-size:0.8rem;">
-                                            Fréquence Cardiaque (Temps dans les zones)</h6>
-                                        <div class="mb-4">
-                                            <?php 
-                                                    // Inverser pour afficher Z5 en haut
-                                                    $zones = $sportDetails[$sport]['zones'];
-                                                    foreach ($zones as $zoneName => $zoneData): 
-                                                ?>
-                                            <div class="zone-bar-container">
-                                                <div class="zone-label"><?= $zoneName ?></div>
-                                                <div class="zone-bar-wrapper">
-                                                    <div class="zone-bar"
-                                                        style="width: <?= max(2, $zoneData['percent']) ?>%; background-color: <?= $zoneData['color'] ?>;">
-                                                        <?= $zoneData['percent'] > 5 ? $zoneData['percent'] . '%' : '' ?>
-                                                    </div>
-                                                </div>
-                                                <div class="zone-percent"><?= $zoneData['percent'] ?>%</div>
-                                            </div>
-                                            <div class="zone-range"><?= $zoneData['range'] ?></div>
-                                            <?php endforeach; ?>
-                                        </div>
-
-                                        <!-- Section Records -->
-                                        <h6 class="fw-bold text-muted mb-2 mt-4 text-uppercase"
-                                            style="font-size:0.8rem;">Meilleurs temps (Records)</h6>
-                                        <div>
-                                            <?php foreach ($sportDetails[$sport]['records'] as $distance => $time): ?>
-                                            <div class="record-item">
-                                                <span class="text-dark"><?= esc($distance) ?></span>
-                                                <span class="fw-bold text-dark"><?= esc($time) ?></span>
-                                            </div>
-                                            <?php endforeach; ?>
-                                        </div>
-                                        <?php else: ?>
-                                        <p class="text-muted text-center py-4">Pas de données détaillées disponibles
-                                            pour ce sport.</p>
-                                        <?php endif; ?>
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
-                        <!-- FIN MODAL -->
                         <?php endforeach ?>
                     </div>
                 </div>
@@ -359,6 +251,7 @@ if (!function_exists('formatTime')) {
                             </div>
                         </div>
                     </div>
+
                 </div>
             </div>
         </div>
@@ -447,7 +340,6 @@ if (!function_exists('formatTime')) {
     <script>
     Chart.defaults.maintainAspectRatio = false;
 
-    // --- 1. Graphique Strava Original ---
     const allActivities = <?= json_encode($rawActivitiesForChart ?? []) ?>;
     const defaultLabels = <?= json_encode(array_column($monthlyDistance ?? [], 'month_key')) ?>;
     const defaultValues =
@@ -527,7 +419,6 @@ if (!function_exists('formatTime')) {
         stravaChart.update();
     }
 
-    // --- 2. Graphique Tonnage Original ---
     <?php if (!empty($tonnageData)): ?>
     const tonnageLabels = <?= json_encode(array_column($tonnageData, 'workout_date')) ?>;
     const tonnageValues = <?= json_encode(array_column($tonnageData, 'total_volume_kg')) ?>;
@@ -575,7 +466,6 @@ if (!function_exists('formatTime')) {
     });
     <?php endif ?>
 
-    // --- 3. Heatmap Radar Musculaire ---
     <?php if (!empty($muscleHeatmap)): ?>
     new Chart(document.getElementById('muscleRadarChart').getContext('2d'), {
         type: 'radar',
