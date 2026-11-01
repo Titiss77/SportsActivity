@@ -7,6 +7,7 @@ if (!function_exists('formatDist')) {
         return number_format($meters / 1000, 2, ',', ' ') . ' km';
     }
 }
+
 if (!function_exists('formatTime')) {
     function formatTime($seconds)
     {
@@ -15,6 +16,7 @@ if (!function_exists('formatTime')) {
         return $h > 0 ? sprintf('%dh %02d', $h, $m) : sprintf('%d min', $m);
     }
 }
+
 if (!function_exists('formatPace')) {
     function formatPace($secPer100m) {
         if (!$secPer100m) return '-';
@@ -22,6 +24,7 @@ if (!function_exists('formatPace')) {
         return sprintf('%02d:%02d /100m', $m, $s);
     }
 }
+
 if (!function_exists('formatPaceKm')) {
     function formatPaceKm($secPerKm) {
         if (!$secPerKm) return '-';
@@ -162,17 +165,6 @@ if (!function_exists('formatPaceKm')) {
                     </div>
                     <div><button class="btn btn-sm bg-strava" type="submit">Importer</button></div>
                 </form>
-
-                <div class="d-flex align-items-center mt-3 mt-md-0">
-                    <div class="text-end me-3">
-                        <span class="d-block fw-bold text-dark mb-0">Score d'Énergie</span>
-                        <small class="text-muted condensed-text">Charge des 7 derniers jours</small>
-                    </div>
-                    <?php $colorScore = $readinessScore > 70 ? '#198754' : ($readinessScore > 40 ? '#fd7e14' : '#dc3545'); ?>
-                    <div class="readiness-badge shadow-sm" style="background-color: <?= $colorScore ?>;">
-                        <?= $readinessScore ?> / 100
-                    </div>
-                </div>
             </div>
         </div>
         <?php else: ?>
@@ -192,12 +184,12 @@ if (!function_exists('formatPaceKm')) {
         <?php if (!empty($activitiesBySport)): ?>
         <!-- SECTION 1 : CARDIO & ENDURANCE (STRAVA) -->
         <div class="mb-5">
-            <h2 class="h4 border-bottom pb-2 text-strava fw-bold"> Cardio & Endurance</h2>
+            <h2 class="h4 border-bottom pb-2 text-strava fw-bold">🔥 Cardio & Endurance</h2>
             <div class="row g-3 mb-4 mt-2">
                 <div class="col-12">
                     <div class="card border-0 shadow-sm">
                         <div class="card-body py-3">
-                            <h3 class="h6 fw-bold mb-3 text-muted"> Objectifs mensuels</h3>
+                            <h3 class="h6 fw-bold mb-3 text-muted">🎯 Objectifs mensuels</h3>
                             <div class="row g-4">
                                 <?php foreach ($currentMonthStats as $monthStat): ?>
                                 <?php
@@ -240,7 +232,6 @@ if (!function_exists('formatPaceKm')) {
                     </div>
                 </div>
             </div>
-
             <div class="row g-4">
                 <div class="col-12 col-xl-6">
                     <div class="row g-2">
@@ -274,7 +265,6 @@ if (!function_exists('formatPaceKm')) {
                         <?php endforeach ?>
                     </div>
                 </div>
-
                 <div class="col-12 col-xl-6">
                     <div class="card h-100">
                         <div class="card-body">
@@ -300,104 +290,20 @@ if (!function_exists('formatPaceKm')) {
                     </div>
                 </div>
             </div>
-
-            <div class="row g-4 mt-1">
-                <!-- NOUVEAU : Records & Allures Max -->
-                <?php if (!empty($bestPerformances)): ?>
-                <div class="col-12 col-xl-6">
-                    <div class="card h-100 shadow-sm border-0">
-                        <div class="card-body p-0">
-                            <div class="p-3 pb-2 border-bottom">
-                                <h3 class="h6 fw-bold mb-0 text-muted" style="color: #dc3545 !important;">Records &
-                                    Allures Max</h3>
-                                <small class="text-muted d-block mt-1">Meilleures moyennes enregistrées par
-                                    sport</small>
-                            </div>
-                            <table class="table table-hover mb-0 text-center align-middle condensed-text">
-                                <thead class="table-light">
-                                    <tr>
-                                        <th class="text-start ps-3">Sport</th>
-                                        <th>Vitesse / Allure Max</th>
-                                    </tr>
-                                </thead>
-                                <tbody>
-                                    <?php foreach ($bestPerformances as $perf): 
-                                        $sportName = $perf['sport_trad'] ?? $perf['sport'];
-                                        $displayPace = '-';
-                                        
-                                        // Vitesse pour le Vélo (km/h)
-                                        if (stripos($perf['sport'], 'Ride') !== false || stripos($perf['sport'], 'Bike') !== false || stripos($perf['sport'], 'Velo') !== false) {
-                                            $displayPace = number_format($perf['max_speed_kmh'], 1, ',', ' ') . ' km/h';
-                                        // Allure pour la Natation (/100m)
-                                        } elseif (stripos($perf['sport'], 'Swim') !== false || stripos($perf['sport'], 'Natation') !== false) {
-                                            $displayPace = formatPace($perf['best_pace_100m']);
-                                        // Allure pour le reste (Course, Marche) (/km)
-                                        } else {
-                                            $displayPace = formatPaceKm($perf['best_pace_km']);
-                                        }
-                                    ?>
-                                    <tr>
-                                        <td class="text-start ps-3 fw-semibold text-muted"><?= esc($sportName) ?></td>
-                                        <td class="fw-bold text-dark"><?= $displayPace ?></td>
-                                    </tr>
-                                    <?php endforeach; ?>
-                                </tbody>
-                            </table>
-                        </div>
-                    </div>
-                </div>
-                <?php endif; ?>
-
-                <!-- Tableau Natation -->
-                <?php if (!empty($swimMetrics)): ?>
-                <div class="col-12 col-xl-6">
-                    <div class="card h-100 shadow-sm border-0">
-                        <div class="card-body p-0">
-                            <div class="p-3 pb-2 border-bottom">
-                                <h3 class="h6 fw-bold mb-0 text-muted" style="color: #0dcaf0 !important;">Focus Natation
-                                </h3>
-                            </div>
-                            <table class="table table-hover mb-0 text-center align-middle condensed-text">
-                                <thead class="table-light">
-                                    <tr>
-                                        <th class="text-start ps-3">Date</th>
-                                        <th>Distance</th>
-                                        <th>Allure /100m</th>
-                                    </tr>
-                                </thead>
-                                <tbody>
-                                    <?php foreach ($swimMetrics as $swim): ?>
-                                    <tr>
-                                        <td class="text-start ps-3 text-muted">
-                                            <?= date('d/m', strtotime($swim['started_at'])) ?></td>
-                                        <td class="fw-bold"><?= formatDist($swim['distance_meters']) ?></td>
-                                        <td class="fw-bold" style="color: #0dcaf0;">
-                                            <?= formatPace($swim['pace_per_100m']) ?></td>
-                                    </tr>
-                                    <?php endforeach; ?>
-                                </tbody>
-                            </table>
-                        </div>
-                    </div>
-                </div>
-                <?php endif; ?>
-            </div>
-
         </div>
         <?php endif; ?>
 
         <?php if (!empty($recentWorkouts)): ?>
         <div class="mb-5">
             <div style="display: flex; justify-content: space-between; align-items: flex-start;">
-                <h2 class="h4 pb-2 mb-4 section-title"> Renforcement & Musculation</h2>
+                <h2 class="h4 pb-2 mb-4 section-title">💪 Renforcement & Musculation</h2>
                 <a class="btn btn-outline-success btn-sm" href="<?= site_url('strength') ?>">Progression Muscu</a>
             </div>
-
             <div class="row g-4">
                 <div class="col-12 col-xl-4">
                     <div class="card h-100">
                         <div class="card-body">
-                            <h3 class="h6 fw-bold mb-3 text-muted"> Évolution du Tonnage</h3>
+                            <h3 class="h6 fw-bold mb-3 text-muted">📈 Évolution du Tonnage</h3>
                             <?php if (empty($tonnageData)): ?>
                             <p class="text-muted small">Aucune donnée de tonnage.</p>
                             <?php else: ?>
@@ -406,11 +312,10 @@ if (!function_exists('formatPaceKm')) {
                         </div>
                     </div>
                 </div>
-
                 <div class="col-12 col-xl-4">
                     <div class="card h-100">
                         <div class="card-body">
-                            <h3 class="h6 fw-bold mb-3 text-muted"> Heatmap Musculaire (15j)</h3>
+                            <h3 class="h6 fw-bold mb-3 text-muted">🎯 Heatmap Musculaire (15j)</h3>
                             <?php if (empty($muscleHeatmap)): ?>
                             <p class="text-muted small">Aucune donnée musculaire récente.</p>
                             <?php else: ?>
@@ -420,7 +325,6 @@ if (!function_exists('formatPaceKm')) {
                         </div>
                     </div>
                 </div>
-
                 <div class="col-12 col-xl-4">
                     <div class="card h-100">
                         <div class="card-body p-0">
@@ -465,8 +369,10 @@ if (!function_exists('formatPaceKm')) {
             </div>
         </div>
         <?php endif ?>
+
         <?php endif; ?>
     </main>
+
     <script>
     Chart.defaults.maintainAspectRatio = false;
 
@@ -537,12 +443,14 @@ if (!function_exists('formatPaceKm')) {
         defaultLabels.forEach(label => {
             filteredDataByMonth[label] = 0;
         });
+
         allActivities.forEach(act => {
             if (selectedSport === 'all' || act.sport === selectedSport) {
                 if (filteredDataByMonth.hasOwnProperty(act.date)) filteredDataByMonth[act.date] += (act
                     .distance / 1000);
             }
         });
+
         const newValues = defaultLabels.map(label => Math.round(filteredDataByMonth[label] * 100) / 100);
         stravaChart.data.datasets[0].data = newValues;
         stravaChart.update();
