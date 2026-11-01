@@ -219,53 +219,6 @@ if (!function_exists('formatTime')) {
         <!-- SECTION 1 : CARDIO & ENDURANCE (STRAVA) -->
         <div class="mb-5">
             <h2 class="h4 border-bottom pb-2 text-strava fw-bold">🔥 Cardio & Endurance</h2>
-            <div class="row g-3 mb-4 mt-2">
-                <div class="col-12">
-                    <div class="card border-0 shadow-sm">
-                        <div class="card-body py-3">
-                            <h3 class="h6 fw-bold mb-3 text-muted">🎯 Objectifs mensuels</h3>
-                            <div class="row g-4">
-                                <?php foreach ($currentMonthStats as $monthStat): ?>
-                                <?php
-                                    if ($monthStat['sport'] === 'WeightTraining') continue;
-                                    
-                                    $sportBase = $monthStat['sport'];
-                                    $sportName = $monthStat['sport_trad'] ?? $sportBase;
-                                    $goalDist = 20000;
-                                    
-                                    if ($sportBase === 'Ride' || $sportBase === 'VirtualRide' || $sportBase === 'Bike') {
-                                        $goalDist = ($userSettings['goal_ride_km'] ?? 300) * 1000;
-                                    } elseif (stripos($sportBase, 'Run') !== false) {
-                                        $goalDist = ($userSettings['goal_run_km'] ?? 60) * 1000;
-                                    } elseif (stripos($sportBase, 'Swim') !== false || $sportBase === 'Open Water') {
-                                        $goalDist = ($userSettings['goal_swim_km'] ?? 20) * 1000;
-                                    } elseif ($sportBase === 'Walk' || $sportBase === 'Hike') {
-                                        $goalDist = ($userSettings['goal_walk_km'] ?? 20) * 1000;
-                                    }
-                                    
-                                    $progress = min(100, ($monthStat['total_distance'] / max(1, $goalDist)) * 100);
-                                    ?>
-                                <div class="col-12 col-md-6 col-xl-3">
-                                    <div class="d-flex justify-content-between mb-1">
-                                        <span
-                                            class="fw-semibold condensed-text text-uppercase"><?= esc($sportName) ?></span>
-                                        <span
-                                            class="condensed-text fw-bold text-dark"><?= formatDist($monthStat['total_distance']) ?>
-                                            / <?= formatDist($goalDist) ?></span>
-                                    </div>
-                                    <div class="progress" style="height: 6px;">
-                                        <div class="progress-bar bg-strava" style="width: <?= $progress ?>%"></div>
-                                    </div>
-                                    <div class="text-muted condensed-text mt-1">
-                                        <?= formatTime($monthStat['total_time']) ?>
-                                    </div>
-                                </div>
-                                <?php endforeach; ?>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-            </div>
 
             <div class="row g-4">
                 <div class="col-12 col-xl-6">

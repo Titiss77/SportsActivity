@@ -38,48 +38,6 @@
                 </form>
             </div>
         </div>
-
-        <div class="card mb-4 border-0 shadow-sm">
-            <div class="card-header bg-white py-3 fw-bold text-strava" style="color: #fc4c02;">🎯 Objectifs Mensuels
-                Strava (km)</div>
-            <div class="card-body">
-                <form action="<?= site_url('profile/updateGoals') ?>" method="post">
-                    <?= csrf_field() ?>
-                    <div class="row g-3 mb-3">
-                        <div class="col-6">
-                            <label class="form-label fw-semibold">Vélo (km)</label>
-                            <input type="number" name="goal_ride_km" class="form-control"
-                                value="<?= esc($settings['goal_ride_km'] ?? 300) ?>" required>
-                        </div>
-                        <div class="col-6">
-                            <label class="form-label fw-semibold">Course à pied (km)</label>
-                            <input type="number" name="goal_run_km" class="form-control"
-                                value="<?= esc($settings['goal_run_km'] ?? 60) ?>" required>
-                        </div>
-                        <div class="col-6">
-                            <label class="form-label fw-semibold">Natation (km)</label>
-                            <input type="number" name="goal_swim_km" class="form-control"
-                                value="<?= esc($settings['goal_swim_km'] ?? 20) ?>" required>
-                        </div>
-                        <div class="col-6">
-                            <label class="form-label fw-semibold">Marche (km)</label>
-                            <input type="number" name="goal_walk_km" class="form-control"
-                                value="<?= esc($settings['goal_walk_km'] ?? 20) ?>" required>
-                        </div>
-                    </div>
-                    <div class="d-flex justify-content-between">
-                        <button class="btn btn-warning text-dark fw-bold" type="submit">Sauvegarder les
-                            objectifs</button>
-                        <?php if (!empty($settings['strava_access_token'])): ?>
-                        <form action="<?= site_url('strava/disconnect') ?>" method="post" class="m-0 p-0">
-                            <?= csrf_field() ?>
-                            <button class="btn btn-outline-danger" type="submit">Déconnecter Strava</button>
-                        </form>
-                        <?php endif; ?>
-                    </div>
-                </form>
-            </div>
-        </div>
     </div>
 </body>
 
