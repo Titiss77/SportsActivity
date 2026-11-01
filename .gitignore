@@ -1,4 +1,6 @@
 /htdocs/.env
 htdocs/.php-cs-fixer.cache
-*.sql*
 /htdocs/writable
+
+*.sql*
+*.png
