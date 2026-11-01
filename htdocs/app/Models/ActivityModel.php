@@ -132,13 +132,8 @@ class ActivityModel extends Model
         return $this->db->query($sql, [$userId])->getResultArray();
     }
 
-    // ==========================================
-    // SÉRIES, RECORDS & ZONES
-    // ==========================================
-
     public function getStreakStats(int $userId): array
     {
-        // On récupère toutes les dates d'activités (en excluant les activités de moins d'1 minute souvent ignorées par Strava)
         $sql = "
             SELECT started_at
             FROM strava_activities 
@@ -153,11 +148,9 @@ class ActivityModel extends Model
             return ['streak_weeks' => 0, 'total_in_streak' => 0];
         }
         
-        // On groupe les activités par "Année + Numéro de semaine ISO" (ex: 202644)
         $weeksMap = [];
         foreach ($activities as $act) {
             $dt = new \DateTime($act['started_at']);
-            // 'o' = Année ISO, 'W' = Semaine ISO (01-53) (Commence le lundi)
             $yw = $dt->format('oW'); 
             
             if (!isset($weeksMap[$yw])) {
@@ -172,7 +165,6 @@ class ActivityModel extends Model
         $iterDate = new \DateTime();
         $currentYw = $iterDate->format('oW');
         
-        // Si aucune activité n'a ENCORE été faite cette semaine, on regarde la semaine dernière
         if (!isset($weeksMap[$currentYw])) {
             $iterDate->modify('-1 week');
             $iterYw = $iterDate->format('oW');
@@ -184,7 +176,6 @@ class ActivityModel extends Model
             $iterYw = $currentYw;
         }
         
-        // On remonte le temps semaine après semaine de façon continue
         while (isset($weeksMap[$iterYw])) {
             $streakWeeks++;
             $totalInStreak += $weeksMap[$iterYw];
@@ -225,5 +216,23 @@ class ActivityModel extends Model
                 ]
             ]
         ];
+    }
+
+    public function deleteMissingActivities(int $userId, string $startDate, string $endDate, array $keptStravaIds): int
+    {
+        $builder = $this->where('user_id', $userId)
+                        ->where('started_at >=', $startDate . ' 00:00:00')
+                        ->where('started_at <=', $endDate . ' 23:59:59');
+
+        if (!empty($keptStravaIds)) {
+            $builder->whereNotIn('strava_activity_id', $keptStravaIds);
+        }
+
+        $count = $builder->countAllResults(false);
+        if ($count > 0) {
+            $builder->delete();
+        }
+        
+        return $count;
     }
 }

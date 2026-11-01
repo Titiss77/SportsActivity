@@ -1,4 +1,6 @@
-<?php namespace App\Controllers;
+<?php
+
+namespace App\Controllers;
 
 use App\Models\ActivityModel;
 
@@ -44,7 +46,6 @@ class Strava extends BaseController
             if ($response->getStatusCode() === 200) {
                 $data = json_decode($response->getBody(), true);
                 
-                // Enregistrement des jetons dans la table user_settings pour l'utilisateur connecté
                 $userId = auth()->id();
                 $db = \Config\Database::connect();
                 $settings = $db->table('user_settings')->where('user_id', $userId)->get()->getRow();
@@ -67,6 +68,7 @@ class Strava extends BaseController
             } else {
                 return redirect()->to('/')->with('error', 'Échec de l\'authentification auprès de Strava.');
             }
+
         } catch (\Exception $e) {
             return redirect()->to('/')->with('error', 'Erreur API : ' . $e->getMessage());
         }
@@ -76,6 +78,7 @@ class Strava extends BaseController
     {
         $userId = auth()->id();
         $db = \Config\Database::connect();
+
         $db->table('user_settings')->where('user_id', $userId)->update([
             'strava_access_token'  => null,
             'strava_refresh_token' => null,
@@ -111,6 +114,7 @@ class Strava extends BaseController
         
         $importedCount = 0;
         $page = 1;
+        $fetchedStravaIds = [];
 
         try {
             do {
@@ -143,9 +147,12 @@ class Strava extends BaseController
                 }
 
                 foreach ($activities as $stravaActivity) {
+                    $stravaId = (string) $stravaActivity['id'];
+                    $fetchedStravaIds[] = $stravaId;
+
                     $activityData = [
-                        'user_id'                 => $userId, // Important pour le multi-utilisateur
-                        'strava_activity_id'      => (string) $stravaActivity['id'],
+                        'user_id'                 => $userId,
+                        'strava_activity_id'      => $stravaId,
                         'name'                    => $stravaActivity['name'] ?? 'Activité Strava',
                         'sport'                   => $stravaActivity['sport_type'] ?? ($stravaActivity['type'] ?? 'Inconnu'),
                         'started_at'              => date('Y-m-d H:i:s', strtotime($stravaActivity['start_date_local'])),
@@ -166,7 +173,25 @@ class Strava extends BaseController
                 $page++;
             } while (count($activities) === 100);
 
-            return redirect()->to('/')->with('success', "Synchronisation terminée. {$importedCount} activités importées ou mises à jour.");
+            $deletedCount = 0;
+
+            // SÉCURITÉ : Si l'API Strava a renvoyé une liste vide d'IDs (zéro activité récupérée)
+            // On vérifie s'il y a des données locales sur cette même période.
+            if (empty($fetchedStravaIds)) {
+                $localCount = $activityModel->where('user_id', $userId)
+                                            ->where('started_at >=', $startDate . ' 00:00:00')
+                                            ->where('started_at <=', $endDate . ' 23:59:59')
+                                            ->countAllResults();
+                
+                if ($localCount > 0) {
+                    return redirect()->to('/')->with('success', "Synchronisation terminée. 0 activité importée. La suppression de vos {$localCount} activités locales a été annulée par sécurité car Strava n'a renvoyé aucune donnée.");
+                }
+            } else {
+                // Nettoyage standard si l'API a bien répondu avec des éléments
+                $deletedCount = $activityModel->deleteMissingActivities($userId, $startDate, $endDate, $fetchedStravaIds);
+            }
+
+            return redirect()->to('/')->with('success', "Synchronisation terminée. {$importedCount} activités importées. {$deletedCount} supprimées.");
 
         } catch (\Exception $e) {
             return redirect()->to('/')->with('error', 'Erreur lors de la synchronisation : ' . $e->getMessage());
