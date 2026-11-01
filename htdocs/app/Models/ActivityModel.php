@@ -1,4 +1,6 @@
-<?php namespace App\Models;
+<?php
+
+namespace App\Models;
 
 use CodeIgniter\Model;
 
@@ -69,9 +71,9 @@ class ActivityModel extends Model
     {
         $sql = "
             SELECT 
-                 COUNT(*) AS total_activities, 
-                 ROUND(SUM(distance_meters)/1000, 2) AS total_distance, 
-                 CONCAT(
+                  COUNT(*) AS total_activities,
+                  ROUND(SUM(distance_meters)/1000, 2) AS total_distance,
+                  CONCAT(
                     FLOOR(COALESCE(SUM(duration_seconds), 0) / 3600), 'h ',
                     FLOOR((COALESCE(SUM(duration_seconds), 0) % 3600) / 60), 'min ',
                     COALESCE(SUM(duration_seconds), 0) % 60, 's'
@@ -131,40 +133,101 @@ class ActivityModel extends Model
     }
 
     // ==========================================
-    // AJOUTS PREMIUM (MODIFIÉ POUR LES ALLURES)
+    // SÉRIES, RECORDS & ZONES
     // ==========================================
 
-    public function getRecentCardioLoad(int $userId, int $days = 7): float
+    public function getStreakStats(int $userId): array
     {
-        $sql = "SELECT COALESCE(SUM(duration_seconds), 0) / 3600 as total_hours FROM strava_activities WHERE user_id = ? AND started_at >= DATE_SUB(CURDATE(), INTERVAL ? DAY) AND sport NOT IN ('WeightTraining')";
-        return (float) $this->db->query($sql, [$userId, $days])->getRow()->total_hours;
+        // 1. On récupère toutes les dates d'activités du plus récent au plus ancien
+        $sql = "
+            SELECT started_at
+            FROM strava_activities 
+            WHERE user_id = ? AND started_at IS NOT NULL
+            ORDER BY started_at DESC
+        ";
+        $activities = $this->db->query($sql, [$userId])->getResultArray();
+        
+        if (empty($activities)) {
+            return ['streak_weeks' => 0, 'total_in_streak' => 0];
+        }
+        
+        // 2. On groupe les activités par "Année + Numéro de semaine ISO" (ex: 202644)
+        $weeksMap = [];
+        foreach ($activities as $act) {
+            $dt = new \DateTime($act['started_at']);
+            // 'o' = Année ISO (gère les semaines à cheval sur 2 années), 'W' = Semaine ISO (01-53)
+            $yw = $dt->format('oW'); 
+            
+            if (!isset($weeksMap[$yw])) {
+                $weeksMap[$yw] = 0;
+            }
+            $weeksMap[$yw]++;
+        }
+        
+        $streakWeeks = 0;
+        $totalInStreak = 0;
+        
+        // 3. On initialise le parcours avec la semaine actuelle
+        $iterDate = new \DateTime();
+        $currentYw = $iterDate->format('oW');
+        
+        // GESTION DU DÉLAI DE GRÂCE :
+        // Si aucune activité n'a ENCORE été faite cette semaine, 
+        // on regarde la semaine dernière pour voir si la série est toujours en vie.
+        if (!isset($weeksMap[$currentYw])) {
+            $iterDate->modify('-1 week');
+            $iterYw = $iterDate->format('oW');
+            
+            // Si la semaine précédente est aussi vide, la série est cassée à 0.
+            if (!isset($weeksMap[$iterYw])) {
+                return ['streak_weeks' => 0, 'total_in_streak' => 0];
+            }
+        } else {
+            $iterYw = $currentYw;
+        }
+        
+        // 4. On remonte le temps semaine après semaine de façon continue
+        while (isset($weeksMap[$iterYw])) {
+            $streakWeeks++;
+            $totalInStreak += $weeksMap[$iterYw];
+            
+            // On recule d'exactement une semaine
+            $iterDate->modify('-1 week');
+            $iterYw = $iterDate->format('oW');
+        }
+        
+        return [
+            'streak_weeks' => $streakWeeks,
+            'total_in_streak' => $totalInStreak
+        ];
     }
 
-    // NOUVELLE FONCTION : Calcul des meilleures allures/vitesses par sport
-    public function getBestPerformancesBySport(int $userId): array
+    public function getSportDetails(int $userId): array
     {
-        $sql = "
-            SELECT sport,
-                   MAX((distance_meters / NULLIF(duration_seconds, 0)) * 3.6) as max_speed_kmh,
-                   MIN((duration_seconds / NULLIF(distance_meters, 0)) * 1000) as best_pace_km,
-                   MIN((duration_seconds / NULLIF(distance_meters, 0)) * 100) as best_pace_100m
-            FROM strava_activities
-            WHERE user_id = ? AND distance_meters > 0 AND duration_seconds > 0 AND sport NOT IN ('WeightTraining', 'Workout')
-            GROUP BY sport
-            ORDER BY max_speed_kmh DESC
-        ";
-        return $this->db->query($sql, [$userId])->getResultArray();
-    }
-
-    public function getSwimMetrics(int $userId, int $limit = 5): array
-    {
-        $sql = "
-            SELECT name, started_at, distance_meters, duration_seconds, 
-                   (duration_seconds / (distance_meters / 100)) as pace_per_100m
-            FROM strava_activities
-            WHERE user_id = ? AND sport IN ('Swim', 'Natation', 'Open Water') AND distance_meters > 0
-            ORDER BY started_at DESC LIMIT ?
-        ";
-        return $this->db->query($sql, [$userId, $limit])->getResultArray();
+        // Structure de données (Simulation de la réponse de l'API Strava / BDD locale pour les Records et Zones)
+        return [
+            'Course à pied' => [
+                'records' => [
+                    '400 m' => '1:10',
+                    '1/2 mille' => '2:47',
+                    '1 km' => '4:24',
+                    '1 mille' => '7:19',
+                    '2 milles' => '15:02',
+                    '5 km' => '23:21',
+                    '10 km' => '53:52',
+                    '15 km' => '1:19:59',
+                    '10 milles' => '1:31:54',
+                    '20 km' => '1:57:20',
+                    'Semi-marathon' => '2:03:48'
+                ],
+                'zones' => [
+                    'Z5' => ['percent' => 1, 'range' => '>179 ppm', 'color' => '#b30000'],
+                    'Z4' => ['percent' => 13, 'range' => '170 - 178 ppm', 'color' => '#dc2626'],
+                    'Z3' => ['percent' => 39, 'range' => '155 - 169 ppm', 'color' => '#ef4444'],
+                    'Z2' => ['percent' => 42, 'range' => '137 - 154 ppm', 'color' => '#f87171'],
+                    'Z1' => ['percent' => 5, 'range' => '<136 ppm', 'color' => '#fca5a5']
+                ]
+            ]
+        ];
     }
 }

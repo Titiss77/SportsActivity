@@ -16,22 +16,6 @@ if (!function_exists('formatTime')) {
         return $h > 0 ? sprintf('%dh %02d', $h, $m) : sprintf('%d min', $m);
     }
 }
-
-if (!function_exists('formatPace')) {
-    function formatPace($secPer100m) {
-        if (!$secPer100m) return '-';
-        $m = intdiv((int)$secPer100m, 60); $s = (int)$secPer100m % 60;
-        return sprintf('%02d:%02d /100m', $m, $s);
-    }
-}
-
-if (!function_exists('formatPaceKm')) {
-    function formatPaceKm($secPerKm) {
-        if (!$secPerKm) return '-';
-        $m = intdiv((int)$secPerKm, 60); $s = (int)$secPerKm % 60;
-        return sprintf('%02d:%02d /km', $m, $s);
-    }
-}
 ?>
 <!doctype html>
 <html lang="fr">
@@ -41,6 +25,7 @@ if (!function_exists('formatPaceKm')) {
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <title><?= esc($title) ?></title>
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <style>
     body {
@@ -102,12 +87,61 @@ if (!function_exists('formatPaceKm')) {
         font-size: 0.85rem;
     }
 
-    .readiness-badge {
-        font-size: 1.25rem;
+    /* Styles pour la modal des records et zones */
+    .zone-bar-container {
+        display: flex;
+        align-items: center;
+        margin-bottom: 8px;
+    }
+
+    .zone-label {
+        width: 30px;
         font-weight: bold;
-        padding: 10px 15px;
-        border-radius: 8px;
+    }
+
+    .zone-bar-wrapper {
+        flex-grow: 1;
+        background: transparent;
+        height: 24px;
+        margin: 0 10px;
+        display: flex;
+        align-items: center;
+    }
+
+    .zone-bar {
+        height: 100%;
+        border-radius: 4px;
+        display: flex;
+        align-items: center;
+        padding-left: 8px;
         color: white;
+        font-weight: bold;
+        font-size: 0.8rem;
+    }
+
+    .zone-percent {
+        width: 45px;
+        text-align: right;
+        font-weight: bold;
+    }
+
+    .zone-range {
+        font-size: 0.75rem;
+        color: #6c757d;
+        text-align: right;
+        margin-top: -5px;
+        margin-bottom: 10px;
+    }
+
+    .record-item {
+        display: flex;
+        justify-content: space-between;
+        padding: 12px 0;
+        border-bottom: 1px solid #eee;
+    }
+
+    .record-item:last-child {
+        border-bottom: none;
     }
     </style>
 </head>
@@ -232,15 +266,22 @@ if (!function_exists('formatPaceKm')) {
                     </div>
                 </div>
             </div>
+
             <div class="row g-4">
                 <div class="col-12 col-xl-6">
                     <div class="row g-2">
                         <?php foreach ($activitiesBySport as $sport => $acts): ?>
+                        <?php $modalId = "modal" . md5($sport); ?>
                         <div class="col-12 col-md-6">
                             <div class="card h-100 shadow-sm border-0">
-                                <div class="card-header bg-white fw-bold d-flex justify-content-between py-2">
+                                <div
+                                    class="card-header bg-white fw-bold d-flex justify-content-between align-items-center py-2">
                                     <span class="condensed-text"><?= esc($sport) ?></span>
-                                    <span class="badge bg-light text-dark border condensed-text">5 réc.</span>
+                                    <!-- Modification : Bouton cliquable pour ouvrir la modale -->
+                                    <button class="btn btn-sm btn-light border condensed-text" data-bs-toggle="modal"
+                                        data-bs-target="#<?= $modalId ?>">
+                                        <?= count($acts) ?> réc.
+                                    </button>
                                 </div>
                                 <div class="list-group list-group-flush">
                                     <?php foreach (array_slice($acts, 0, 5) as $activity): ?>
@@ -262,11 +303,67 @@ if (!function_exists('formatPaceKm')) {
                                 </div>
                             </div>
                         </div>
+
+                        <!-- MODAL STATISTIQUES POUR LE SPORT -->
+                        <div class="modal fade" id="<?= $modalId ?>" tabindex="-1" aria-hidden="true">
+                            <div class="modal-dialog modal-dialog-centered">
+                                <div class="modal-content border-0 shadow">
+                                    <div class="modal-header border-0 pb-0">
+                                        <h5 class="modal-title fw-bold">Statistiques : <?= esc($sport) ?></h5>
+                                        <button type="button" class="btn-close" data-bs-dismiss="modal"
+                                            aria-label="Close"></button>
+                                    </div>
+                                    <div class="modal-body pt-3">
+                                        <?php if (isset($sportDetails[$sport])): ?>
+                                        <!-- Section Zones Cardiaques -->
+                                        <h6 class="fw-bold text-muted mb-3 text-uppercase" style="font-size:0.8rem;">
+                                            Fréquence Cardiaque (Temps dans les zones)</h6>
+                                        <div class="mb-4">
+                                            <?php 
+                                                    // Inverser pour afficher Z5 en haut
+                                                    $zones = $sportDetails[$sport]['zones'];
+                                                    foreach ($zones as $zoneName => $zoneData): 
+                                                ?>
+                                            <div class="zone-bar-container">
+                                                <div class="zone-label"><?= $zoneName ?></div>
+                                                <div class="zone-bar-wrapper">
+                                                    <div class="zone-bar"
+                                                        style="width: <?= max(2, $zoneData['percent']) ?>%; background-color: <?= $zoneData['color'] ?>;">
+                                                        <?= $zoneData['percent'] > 5 ? $zoneData['percent'] . '%' : '' ?>
+                                                    </div>
+                                                </div>
+                                                <div class="zone-percent"><?= $zoneData['percent'] ?>%</div>
+                                            </div>
+                                            <div class="zone-range"><?= $zoneData['range'] ?></div>
+                                            <?php endforeach; ?>
+                                        </div>
+
+                                        <!-- Section Records -->
+                                        <h6 class="fw-bold text-muted mb-2 mt-4 text-uppercase"
+                                            style="font-size:0.8rem;">Meilleurs temps (Records)</h6>
+                                        <div>
+                                            <?php foreach ($sportDetails[$sport]['records'] as $distance => $time): ?>
+                                            <div class="record-item">
+                                                <span class="text-dark"><?= esc($distance) ?></span>
+                                                <span class="fw-bold text-dark"><?= esc($time) ?></span>
+                                            </div>
+                                            <?php endforeach; ?>
+                                        </div>
+                                        <?php else: ?>
+                                        <p class="text-muted text-center py-4">Pas de données détaillées disponibles
+                                            pour ce sport.</p>
+                                        <?php endif; ?>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        <!-- FIN MODAL -->
                         <?php endforeach ?>
                     </div>
                 </div>
+
                 <div class="col-12 col-xl-6">
-                    <div class="card h-100">
+                    <div class="card h-100 shadow-sm border-0">
                         <div class="card-body">
                             <div class="d-flex justify-content-between align-items-center mb-3">
                                 <h3 class="h6 fw-bold mb-0 text-muted">Progression des Activités</h3>
@@ -286,6 +383,27 @@ if (!function_exists('formatPaceKm')) {
                                 <span class="small fw-bold" style="color: #fc4c02; font-size: 0.75rem;">POWERED BY
                                     STRAVA</span>
                             </div>
+                            <!-- NOUVEAU : Bloc Série d'activités (Strava Streak) -->
+                            <div class="card mt-4 border-0 shadow-sm">
+                                <div class="card-body">
+                                    <div class="d-flex align-items-center mb-3">
+                                        <h3 class="h6 fw-bold mb-0 text-muted">🔥 Série d'activités</h3>
+                                    </div>
+                                    <div class="row text-center">
+                                        <div class="col-6 border-end">
+                                            <span
+                                                class="d-block fs-3 fw-bold text-dark"><?= esc($streakStats['streak_weeks'] ?? 0) ?>
+                                                Semaines</span>
+                                            <small class="text-muted">Votre série</small>
+                                        </div>
+                                        <div class="col-6">
+                                            <span
+                                                class="d-block fs-3 fw-bold text-dark"><?= esc($streakStats['total_in_streak'] ?? 0) ?></span>
+                                            <small class="text-muted">Activités en série</small>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
                         </div>
                     </div>
                 </div>
@@ -301,7 +419,7 @@ if (!function_exists('formatPaceKm')) {
             </div>
             <div class="row g-4">
                 <div class="col-12 col-xl-4">
-                    <div class="card h-100">
+                    <div class="card h-100 border-0 shadow-sm">
                         <div class="card-body">
                             <h3 class="h6 fw-bold mb-3 text-muted">📈 Évolution du Tonnage</h3>
                             <?php if (empty($tonnageData)): ?>
@@ -313,7 +431,7 @@ if (!function_exists('formatPaceKm')) {
                     </div>
                 </div>
                 <div class="col-12 col-xl-4">
-                    <div class="card h-100">
+                    <div class="card h-100 border-0 shadow-sm">
                         <div class="card-body">
                             <h3 class="h6 fw-bold mb-3 text-muted">🎯 Heatmap Musculaire (15j)</h3>
                             <?php if (empty($muscleHeatmap)): ?>
@@ -326,7 +444,7 @@ if (!function_exists('formatPaceKm')) {
                     </div>
                 </div>
                 <div class="col-12 col-xl-4">
-                    <div class="card h-100">
+                    <div class="card h-100 border-0 shadow-sm">
                         <div class="card-body p-0">
                             <div class="p-3 pb-2 border-bottom">
                                 <h3 class="h6 fw-bold mb-0 text-muted">Séances de force récentes</h3>
