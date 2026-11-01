@@ -138,11 +138,13 @@ class ActivityModel extends Model
 
     public function getStreakStats(int $userId): array
     {
-        // 1. On récupère toutes les dates d'activités du plus récent au plus ancien
+        // On récupère toutes les dates d'activités (en excluant les activités de moins d'1 minute souvent ignorées par Strava)
         $sql = "
             SELECT started_at
             FROM strava_activities 
-            WHERE user_id = ? AND started_at IS NOT NULL
+            WHERE user_id = ? 
+              AND started_at IS NOT NULL
+              AND duration_seconds >= 60
             ORDER BY started_at DESC
         ";
         $activities = $this->db->query($sql, [$userId])->getResultArray();
@@ -151,11 +153,11 @@ class ActivityModel extends Model
             return ['streak_weeks' => 0, 'total_in_streak' => 0];
         }
         
-        // 2. On groupe les activités par "Année + Numéro de semaine ISO" (ex: 202644)
+        // On groupe les activités par "Année + Numéro de semaine ISO" (ex: 202644)
         $weeksMap = [];
         foreach ($activities as $act) {
             $dt = new \DateTime($act['started_at']);
-            // 'o' = Année ISO (gère les semaines à cheval sur 2 années), 'W' = Semaine ISO (01-53)
+            // 'o' = Année ISO, 'W' = Semaine ISO (01-53) (Commence le lundi)
             $yw = $dt->format('oW'); 
             
             if (!isset($weeksMap[$yw])) {
@@ -167,18 +169,14 @@ class ActivityModel extends Model
         $streakWeeks = 0;
         $totalInStreak = 0;
         
-        // 3. On initialise le parcours avec la semaine actuelle
         $iterDate = new \DateTime();
         $currentYw = $iterDate->format('oW');
         
-        // GESTION DU DÉLAI DE GRÂCE :
-        // Si aucune activité n'a ENCORE été faite cette semaine, 
-        // on regarde la semaine dernière pour voir si la série est toujours en vie.
+        // Si aucune activité n'a ENCORE été faite cette semaine, on regarde la semaine dernière
         if (!isset($weeksMap[$currentYw])) {
             $iterDate->modify('-1 week');
             $iterYw = $iterDate->format('oW');
             
-            // Si la semaine précédente est aussi vide, la série est cassée à 0.
             if (!isset($weeksMap[$iterYw])) {
                 return ['streak_weeks' => 0, 'total_in_streak' => 0];
             }
@@ -186,12 +184,11 @@ class ActivityModel extends Model
             $iterYw = $currentYw;
         }
         
-        // 4. On remonte le temps semaine après semaine de façon continue
+        // On remonte le temps semaine après semaine de façon continue
         while (isset($weeksMap[$iterYw])) {
             $streakWeeks++;
             $totalInStreak += $weeksMap[$iterYw];
             
-            // On recule d'exactement une semaine
             $iterDate->modify('-1 week');
             $iterYw = $iterDate->format('oW');
         }
@@ -204,7 +201,6 @@ class ActivityModel extends Model
 
     public function getSportDetails(int $userId): array
     {
-        // Structure de données (Simulation de la réponse de l'API Strava / BDD locale pour les Records et Zones)
         return [
             'Course à pied' => [
                 'records' => [
