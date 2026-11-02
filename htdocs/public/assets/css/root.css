@@ -1,0 +1,87 @@
+body {
+    background-color: #f4f6f8;
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Arial, sans-serif;
+}
+
+.text-strava {
+    color: #fc4c02;
+}
+
+.bg-strava {
+    background-color: #fc4c02;
+    color: white;
+    border-color: #fc4c02;
+}
+
+.bg-strava:hover {
+    background-color: #e34301;
+    color: white;
+}
+
+.section-title {
+    color: #198754;
+    font-weight: 700;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.condensed-text {
+    font-size: 0.85rem;
+}
+
+.workout-link {
+    color: #198754;
+    text-decoration: none;
+    transition: color 0.2s;
+}
+
+.workout-link:hover {
+    color: #146c43;
+    text-decoration: underline;
+}
+
+/* Styles pour le formulaire de musculation */
+.dynamic-input {
+    border-radius: 12px;
+    height: 50px;
+    font-size: 1.1rem;
+}
+
+.btn-add-set {
+    border-radius: 25px;
+    border: 1px solid #ced4da;
+    color: #495057;
+    background: white;
+    font-weight: 600;
+    padding: 10px;
+    transition: 0.2s;
+}
+
+.btn-add-set:hover {
+    background: #e9ecef;
+}
+
+.delete-btn {
+    cursor: pointer;
+    color: #6c757d;
+    transition: color 0.2s;
+    background: none;
+    border: none;
+    padding: 5px;
+}
+
+.delete-btn:hover {
+    color: #dc3545;
+}
+
+.set-header {
+    font-size: 0.95rem;
+    font-weight: 700;
+    color: #000;
+}
+
+.set-number {
+    font-size: 1.1rem;
+    color: #6c757d;
+}
