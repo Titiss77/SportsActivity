@@ -4,12 +4,16 @@
 <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
+
+    <!-- Optimisations de chargement : préconnexion aux CDN -->
+    <link rel="preconnect" href="https://cdn.jsdelivr.net" crossorigin>
+    <link rel="dns-prefetch" href="https://cdn.jsdelivr.net">
+
     <title><?= esc($title ?? 'Tableau de bord') ?></title>
 
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
     <link href="<?= base_url('assets/css/root.css') ?>" rel="stylesheet">
 
-    <!-- Injection de CSS spécifique par page -->
     <?= $this->renderSection('styles') ?>
 </head>
 
@@ -61,14 +65,13 @@
         <div class="alert alert-warning alert-dismissible fade show"><?= esc(session()->getFlashdata('error')) ?></div>
         <?php endif ?>
 
-        <!-- Contenu principal -->
         <?= $this->renderSection('content') ?>
     </main>
 
-    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
-    <script src="<?= base_url('assets/js/script.js') ?>"></script>
+    <!-- Chargement différé des scripts non bloquants -->
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js" defer></script>
+    <script src="<?= base_url('assets/js/script.js') ?>" defer></script>
 
-    <!-- Injection de JS spécifique par page (Uniquement des initialisations avec les data PHP) -->
     <?= $this->renderSection('scripts') ?>
 </body>
 

@@ -18,19 +18,20 @@ const DashboardCharts = {
                     data: values,
                     borderColor: '#fc4c02',
                     backgroundColor: gradient,
-                    borderWidth: 3,
+                    borderWidth: 2, // Réduit pour un rendu plus léger
                     fill: true,
                     tension: 0.35,
                     pointBackgroundColor: '#fc4c02',
                     pointBorderColor: '#ffffff',
-                    pointBorderWidth: 2,
-                    pointRadius: 5,
-                    pointHoverRadius: 7
+                    pointBorderWidth: 1,
+                    pointRadius: 3, // Réduit
+                    pointHoverRadius: 5 // Réduit
                 }]
             },
             options: {
                 responsive: true,
                 maintainAspectRatio: false,
+                animation: false, // Désactive l'animation pour un chargement immédiat
                 scales: {
                     y: { beginAtZero: true, grid: { color: '#f1f3f5' } },
                     x: { grid: { display: false } }
@@ -42,7 +43,6 @@ const DashboardCharts = {
             }
         });
 
-        // Écouteur d'événement pour le filtre par sport
         const filter = document.getElementById('sportFilter');
         if (filter) {
             filter.addEventListener('change', (e) => {
@@ -55,13 +55,16 @@ const DashboardCharts = {
         let filteredDataByMonth = {};
         defaultLabels.forEach(label => { filteredDataByMonth[label] = 0; });
 
-        allActivities.forEach(act => {
+        // Optimisation de la boucle
+        const len = allActivities.length;
+        for (let i = 0; i < len; i++) {
+            const act = allActivities[i];
             if (selectedSport === 'all' || act.sport === selectedSport) {
-                if (filteredDataByMonth.hasOwnProperty(act.date)) {
+                if (filteredDataByMonth[act.date] !== undefined) {
                     filteredDataByMonth[act.date] += (act.distance / 1000);
                 }
             }
-        });
+        }
 
         const newValues = defaultLabels.map(label => Math.round(filteredDataByMonth[label] * 100) / 100);
         this.stravaChartInstance.data.datasets[0].data = newValues;
@@ -85,12 +88,13 @@ const DashboardCharts = {
                     tension: 0.3,
                     pointBackgroundColor: '#198754',
                     pointBorderColor: '#ffffff',
-                    pointBorderWidth: 2,
-                    pointRadius: 4
+                    pointBorderWidth: 1,
+                    pointRadius: 3
                 }]
             },
             options: {
                 responsive: true,
+                animation: false, // Désactivé
                 scales: {
                     y: { beginAtZero: true, suggestedMax: suggestedMaxTon, grid: { color: '#f1f3f5' } },
                     x: { grid: { display: false } }
@@ -116,6 +120,7 @@ const DashboardCharts = {
                 }]
             },
             options: {
+                animation: false, // Désactivé
                 plugins: { legend: { display: false } },
                 scales: {
                     r: { ticks: { display: false }, grid: { color: '#e9ecef' }, angleLines: { color: '#e9ecef' } }
@@ -143,7 +148,7 @@ const ExerciseCharts = {
                         borderDash: [5, 5],
                         fill: false,
                         tension: 0.3,
-                        pointRadius: 4,
+                        pointRadius: 3,
                     },
                     {
                         label: 'Charge Réelle (kg)',
@@ -152,13 +157,14 @@ const ExerciseCharts = {
                         backgroundColor: 'rgba(221, 72, 20, 0.1)',
                         fill: true,
                         tension: 0.3,
-                        pointRadius: 5,
-                        pointHoverRadius: 8
+                        pointRadius: 4,
+                        pointHoverRadius: 6
                     }
                 ]
             },
             options: {
                 responsive: true,
+                animation: false, // Désactivé
                 plugins: {
                     tooltip: {
                         callbacks: {
@@ -190,8 +196,9 @@ document.addEventListener("DOMContentLoaded", function() {
         new simpleDatatables.DataTable(table, {
             searchable: true,
             fixedHeight: false,
+            perPage: 15, // Optimisation: affiche moins de lignes d'un coup
             labels: {
-                placeholder: "Rechercher une activité...",
+                placeholder: "Rechercher...",
                 perPage: "activités par page",
                 noRows: "Aucune activité trouvée",
                 info: "Affichage de {start} à {end} sur {rows} activités"
@@ -203,47 +210,76 @@ document.addEventListener("DOMContentLoaded", function() {
 // ==========================================
 // FORMULAIRE DE MUSCULATION (LOGIQUE DYNAMIQUE)
 // ==========================================
-function toggleNewExercise() {
-    const select = document.getElementById('exerciseSelect');
-    const div = document.getElementById('newExerciseDiv');
-    const inputName = document.getElementById('newExerciseName');
+
+// Variables globales pour le formulaire afin d'éviter les recherches DOM multiples
+let formState = {
+    container: null,
+    exerciseSelect: null,
+    newExerciseDiv: null,
+    newExerciseName: null
+};
+
+document.addEventListener("DOMContentLoaded", function() {
+    formState.container = document.getElementById('setsContainer');
+    formState.exerciseSelect = document.getElementById('exerciseSelect');
+    formState.newExerciseDiv = document.getElementById('newExerciseDiv');
+    formState.newExerciseName = document.getElementById('newExerciseName');
     
-    if (select && div && inputName) {
-        if (select.value === 'new') {
-            div.style.display = 'block';
-            inputName.required = true;
+    // Délégation d'événements pour le conteneur des séries (meilleure performance que d'ajouter des onClick inline)
+    if (formState.container) {
+        formState.container.addEventListener('click', function(e) {
+            const btn = e.target.closest('.delete-btn');
+            if (btn) {
+                deleteSet(btn);
+            }
+        });
+    }
+});
+
+function toggleNewExercise() {
+    if (formState.exerciseSelect && formState.newExerciseDiv && formState.newExerciseName) {
+        if (formState.exerciseSelect.value === 'new') {
+            formState.newExerciseDiv.style.display = 'block';
+            formState.newExerciseName.required = true;
         } else {
-            div.style.display = 'none';
-            inputName.required = false;
+            formState.newExerciseDiv.style.display = 'none';
+            formState.newExerciseName.required = false;
         }
     }
 }
 
 function updateSetNumbers() {
-    const rows = document.querySelectorAll('.set-row');
-    rows.forEach((row, index) => {
-        const numberEl = row.querySelector('.set-number');
-        if (numberEl) numberEl.innerText = index + 1;
-    });
+    if (!formState.container) return;
+    const rows = formState.container.getElementsByClassName('set-row');
+    const len = rows.length;
+    for (let i = 0; i < len; i++) {
+        const numberEl = rows[i].querySelector('.set-number');
+        if (numberEl) numberEl.innerText = i + 1;
+    }
 }
 
 function addSet() {
-    const container = document.getElementById('setsContainer');
-    const rows = document.querySelectorAll('.set-row');
+    if (!formState.container) return;
+    
+    // Utiliser getElementsByClassName car c'est plus rapide que querySelectorAll
+    const rows = formState.container.getElementsByClassName('set-row');
     
     let lastReps = "";
     let lastWeight = "";
+    
     if (rows.length > 0) {
         const lastRow = rows[rows.length - 1];
-        const repsInput = lastRow.querySelector('input[name="reps[]"]');
-        const weightInput = lastRow.querySelector('input[name="weight[]"]');
-        
-        if (repsInput) lastReps = repsInput.value;
-        if (weightInput) lastWeight = weightInput.value;
+        // Optimisation : recherche ciblée
+        const inputs = lastRow.getElementsByTagName('input');
+        if (inputs.length >= 2) {
+             lastReps = inputs[0].value;
+             lastWeight = inputs[1].value;
+        }
     }
     
     const newRow = document.createElement('div');
     newRow.className = 'set-row d-flex align-items-center mb-3 gap-2';
+    // Éviter l'événement inline onclick="deleteSet(this)" géré via délégation
     newRow.innerHTML = `
         <div class="fw-bold text-center set-number" style="width: 15%;"></div>
         <div style="width: 35%;">
@@ -253,20 +289,19 @@ function addSet() {
             <input type="number" step="0.25" name="weight[]" class="form-control dynamic-input text-center" value="${lastWeight}" required>
         </div>
         <div style="width: 10%; text-align: center;">
-            <button type="button" class="delete-btn" onclick="deleteSet(this)" title="Supprimer">
+            <button type="button" class="delete-btn" title="Supprimer">
                 <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"></polyline><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path></svg>
             </button>
         </div>
     `;
     
-    if (container) {
-        container.appendChild(newRow);
-        updateSetNumbers();
-    }
+    formState.container.appendChild(newRow);
+    updateSetNumbers();
 }
 
 function deleteSet(btn) {
-    const rows = document.querySelectorAll('.set-row');
+    if (!formState.container) return;
+    const rows = formState.container.getElementsByClassName('set-row');
     if (rows.length > 1) {
         const row = btn.closest('.set-row');
         if (row) {
@@ -278,7 +313,6 @@ function deleteSet(btn) {
     }
 }
 
-// Navigation vers la page d'exercice (depuis index musculation)
 function goToExercise(baseUrl) {
     const selectEl = document.getElementById('exerciseSelectGraph');
     if (selectEl && selectEl.value) {

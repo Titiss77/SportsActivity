@@ -20,8 +20,8 @@ $this->setData([
         <input type="hidden" name="strava_id" value="<?= esc($stravaId ?? '') ?>">
         <input type="hidden" name="workout_id" value="<?= esc($workoutId ?? '') ?>">
 
-        <!-- Sélection Exercice -->
         <div class="mb-4">
+            <!-- Appel direct géré par attribut onchange laissé car il dépend d'un seul élément racine, mais JS centralisé -->
             <select name="exercise_id" id="exerciseSelect" class="form-select dynamic-input fw-semibold" required
                 onchange="toggleNewExercise()">
                 <option value="">Sélectionner un exercice...</option>
@@ -33,7 +33,6 @@ $this->setData([
             </select>
         </div>
 
-        <!-- Bloc Nouvel Exercice -->
         <div id="newExerciseDiv" class="mb-4 p-3 bg-white border rounded shadow-sm" style="display: none;">
             <div class="mb-3">
                 <label class="form-label small fw-bold">Nom de l'exercice</label>
@@ -51,7 +50,6 @@ $this->setData([
             </div>
         </div>
 
-        <!-- En-têtes Colonnes -->
         <div class="d-flex justify-content-between px-2 mb-3 set-header">
             <div style="width: 15%;">Série</div>
             <div style="width: 35%;">Répétitions</div>
@@ -59,7 +57,6 @@ $this->setData([
             <div style="width: 10%;"></div>
         </div>
 
-        <!-- Conteneur des Séries -->
         <div id="setsContainer">
             <div class="set-row d-flex align-items-center mb-3 gap-2">
                 <div class="fw-bold text-center set-number" style="width: 15%;">1</div>
@@ -72,7 +69,8 @@ $this->setData([
                         value="40" required>
                 </div>
                 <div style="width: 10%; text-align: center;">
-                    <button type="button" class="delete-btn" onclick="deleteSet(this)" title="Supprimer">
+                    <!-- Supression de onClick inline, géré par le listener sur #setsContainer -->
+                    <button type="button" class="delete-btn" title="Supprimer">
                         <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor"
                             stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
                             <polyline points="3 6 5 6 21 6"></polyline>
@@ -84,6 +82,7 @@ $this->setData([
             </div>
         </div>
 
+        <!-- Appel direct gardé pour simplicité -->
         <button type="button" class="btn w-100 btn-add-set d-flex justify-content-center align-items-center gap-2 mb-4"
             onclick="addSet()">
             <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
