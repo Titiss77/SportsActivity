@@ -17,7 +17,6 @@
 
     <nav class="navbar navbar-light bg-white border-bottom mb-4">
         <div class="container">
-            <!-- Modification dynamique du lien de retour si défini, sinon vers l'accueil -->
             <?php if (isset($backUrl)): ?>
             <a class="text-decoration-none fw-semibold text-dark" href="<?= esc($backUrl) ?>">
                 <span class="fs-5">←</span> <?= esc($backText ?? 'Retour') ?>
@@ -54,7 +53,6 @@
     </nav>
 
     <main class="container mb-5">
-        <!-- Messages flash -->
         <?php if (session()->getFlashdata('success')): ?>
         <div class="alert alert-success alert-dismissible fade show"><?= esc(session()->getFlashdata('success')) ?>
         </div>
@@ -68,8 +66,9 @@
     </main>
 
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+    <script src="<?= base_url('assets/js/script.js') ?>"></script>
 
-    <!-- Injection de JS spécifique par page -->
+    <!-- Injection de JS spécifique par page (Uniquement des initialisations avec les data PHP) -->
     <?= $this->renderSection('scripts') ?>
 </body>
 

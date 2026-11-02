@@ -35,63 +35,17 @@ $this->setData([
 <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 <?php if (!empty($evolutionData)): ?>
 <script>
-const labels = <?= json_encode(array_column($evolutionData, 'workout_date')) ?>;
-const totalWeights = <?= json_encode(array_column($evolutionData, 'total_weight_lifted')) ?>;
-const weights = <?= json_encode(array_column($evolutionData, 'weight_used')) ?>;
-const reps = <?= json_encode(array_column($evolutionData, 'total_reps')) ?>;
-const oneRm = <?= json_encode(array_column($evolutionData, 'estimated_1rm')) ?>;
-
-new Chart(document.getElementById('exerciseChart'), {
-    type: 'line',
-    data: {
-        labels: labels,
-        datasets: [{
-                label: '1RM Estimé (kg)',
-                data: oneRm,
-                borderColor: '#198754',
-                backgroundColor: 'rgba(25, 135, 84, 0.1)',
-                borderDash: [5, 5],
-                fill: false,
-                tension: 0.3,
-                pointRadius: 4,
-            },
-            {
-                label: 'Charge Réelle (kg)',
-                data: totalWeights,
-                borderColor: '#dd4814',
-                backgroundColor: 'rgba(221, 72, 20, 0.1)',
-                fill: true,
-                tension: 0.3,
-                pointRadius: 5,
-                pointHoverRadius: 8
-            }
-        ]
-    },
-    options: {
-        responsive: true,
-        plugins: {
-            tooltip: {
-                callbacks: {
-                    label: function(context) {
-                        let index = context.dataIndex;
-                        if (context.datasetIndex === 0) {
-                            return ` 1RM Estimé : ${oneRm[index]} kg`;
-                        } else {
-                            return ` Charge Vol. : ${totalWeights[index]} kg (${weights[index]} kg x ${reps[index]} reps)`;
-                        }
-                    }
-                }
-            }
-        },
-        scales: {
-            y: {
-                beginAtZero: false,
-                title: {
-                    display: true,
-                    text: 'Poids (kg)'
-                }
-            }
-        }
+document.addEventListener("DOMContentLoaded", function() {
+    const ctx = document.getElementById('exerciseChart');
+    if (ctx) {
+        ExerciseCharts.init(
+            ctx,
+            <?= json_encode(array_column($evolutionData, 'workout_date')) ?>,
+            <?= json_encode(array_column($evolutionData, 'total_weight_lifted')) ?>,
+            <?= json_encode(array_column($evolutionData, 'weight_used')) ?>,
+            <?= json_encode(array_column($evolutionData, 'total_reps')) ?>,
+            <?= json_encode(array_column($evolutionData, 'estimated_1rm')) ?>
+        );
     }
 });
 </script>

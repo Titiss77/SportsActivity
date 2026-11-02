@@ -1,5 +1,4 @@
 <?php 
-// Passer les variables au layout
 $this->setData([
     'title' => 'Historique des Activités',
     'backUrl' => site_url('/'),
@@ -21,28 +20,6 @@ td {
 }
 </style>
 <?= $this->endSection() ?>
-
-<?= $this->section('scripts') ?>
-<script src="https://cdn.jsdelivr.net/npm/simple-datatables@latest" type="text/javascript"></script>
-<script>
-document.addEventListener("DOMContentLoaded", function() {
-    const table = document.getElementById("myAdminTable");
-    if (table) {
-        new simpleDatatables.DataTable(table, {
-            searchable: true,
-            fixedHeight: false,
-            labels: {
-                placeholder: "Rechercher une activité...",
-                perPage: "activités par page",
-                noRows: "Aucune activité trouvée",
-                info: "Affichage de {start} à {end} sur {rows} activités"
-            }
-        });
-    }
-});
-</script>
-<?= $this->endSection() ?>
-
 
 <?= $this->section('content') ?>
 <div class="d-flex justify-content-between align-items-center mb-3">
@@ -136,4 +113,9 @@ document.addEventListener("DOMContentLoaded", function() {
         </div>
     </div>
 </div>
+<?= $this->endSection() ?>
+
+<?= $this->section('scripts') ?>
+<!-- La logique d'initialisation de datatables est prise en charge de base par script.js -->
+<script src="https://cdn.jsdelivr.net/npm/simple-datatables@latest" type="text/javascript"></script>
 <?= $this->endSection() ?>

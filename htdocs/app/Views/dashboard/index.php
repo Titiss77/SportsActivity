@@ -51,7 +51,6 @@ if (!function_exists('formatTime')) {
 <div class="mb-5">
     <h2 class="h4 border-bottom pb-2 text-strava fw-bold">🚀 Cardio & Endurance</h2>
     <div class="row g-4">
-        <!-- Colonne de gauche : Listes d'activités -->
         <div class="col-12 col-xl-6">
             <div class="row g-2">
                 <?php foreach ($activitiesBySport as $sport => $acts): ?>
@@ -84,15 +83,13 @@ if (!function_exists('formatTime')) {
                 <?php endforeach ?>
             </div>
         </div>
-        <!-- Colonne de droite : Graphique + Streak -->
         <div class="col-12 col-xl-6">
             <div class="card h-100 shadow-sm border-0">
                 <div class="card-body">
                     <div class="d-flex justify-content-between align-items-center mb-3">
                         <h3 class="h6 fw-bold mb-0 text-muted">Progression des Activités</h3>
                         <select id="sportFilter"
-                            class="form-select form-select-sm w-auto fw-semibold text-strava border-strava"
-                            onchange="updateStravaChart()">
+                            class="form-select form-select-sm w-auto fw-semibold text-strava border-strava">
                             <option value="all">Tous les sports</option>
                             <?php foreach (array_keys($activitiesBySport) as $sName): ?>
                             <option value="<?= esc($sName) ?>"><?= esc($sName) ?></option>
@@ -206,177 +203,45 @@ if (!function_exists('formatTime')) {
 </div>
 <?php endif ?>
 <?php endif; ?>
-
 <?= $this->endSection() ?>
 
 <?= $this->section('scripts') ?>
 <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 <script>
-Chart.defaults.maintainAspectRatio = false;
+document.addEventListener("DOMContentLoaded", function() {
+    Chart.defaults.maintainAspectRatio = false;
 
-// --- CHARTS STRAVA ---
-const allActivities = <?= json_encode($rawActivitiesForChart ?? []) ?>;
-const defaultLabels = <?= json_encode(array_column($monthlyDistance ?? [], 'month_key')) ?>;
-const defaultValues =
-    <?= json_encode(array_map(static fn($row) => round(((float) $row['distance_meters']) / 1000, 2), $monthlyDistance ?? [])) ?>;
-
-const ctx = document.getElementById('stravaStyleChart').getContext('2d');
-const gradient = ctx.createLinearGradient(0, 0, 0, 250);
-gradient.addColorStop(0, 'rgba(252, 76, 2, 0.4)');
-gradient.addColorStop(1, 'rgba(252, 76, 2, 0.0)');
-
-let stravaChart = new Chart(ctx, {
-    type: 'line',
-    data: {
-        labels: defaultLabels,
-        datasets: [{
-            data: defaultValues,
-            borderColor: '#fc4c02',
-            backgroundColor: gradient,
-            borderWidth: 3,
-            fill: true,
-            tension: 0.35,
-            pointBackgroundColor: '#fc4c02',
-            pointBorderColor: '#ffffff',
-            pointBorderWidth: 2,
-            pointRadius: 5,
-            pointHoverRadius: 7
-        }]
-    },
-    options: {
-        responsive: true,
-        maintainAspectRatio: false,
-        scales: {
-            y: {
-                beginAtZero: true,
-                grid: {
-                    color: '#f1f3f5'
-                }
-            },
-            x: {
-                grid: {
-                    display: false
-                }
-            }
-        },
-        plugins: {
-            legend: {
-                display: false
-            },
-            tooltip: {
-                callbacks: {
-                    label: function(context) {
-                        return context.parsed.y + ' km';
-                    }
-                }
-            }
-        }
+    const ctxStrava = document.getElementById('stravaStyleChart')?.getContext('2d');
+    if (ctxStrava) {
+        DashboardCharts.initStrava(
+            ctxStrava,
+            <?= json_encode($rawActivitiesForChart ?? []) ?>,
+            <?= json_encode(array_column($monthlyDistance ?? [], 'month_key')) ?>,
+            <?= json_encode(array_map(static fn($row) => round(((float) $row['distance_meters']) / 1000, 2), $monthlyDistance ?? [])) ?>
+        );
     }
-});
 
-function updateStravaChart() {
-    const selectedSport = document.getElementById('sportFilter').value;
-    let filteredDataByMonth = {};
-
-    defaultLabels.forEach(label => {
-        filteredDataByMonth[label] = 0;
-    });
-
-    allActivities.forEach(act => {
-        if (selectedSport === 'all' || act.sport === selectedSport) {
-            if (filteredDataByMonth.hasOwnProperty(act.date)) filteredDataByMonth[act.date] += (act.distance /
-                1000);
-        }
-    });
-
-    const newValues = defaultLabels.map(label => Math.round(filteredDataByMonth[label] * 100) / 100);
-    stravaChart.data.datasets[0].data = newValues;
-    stravaChart.update();
-}
-
-// --- CHARTS MUSCU ---
-<?php if (!empty($tonnageData)): ?>
-const tonnageLabels = <?= json_encode(array_column($tonnageData, 'workout_date')) ?>;
-const tonnageValues = <?= json_encode(array_column($tonnageData, 'total_volume_kg')) ?>;
-const maxTon = Math.max(...tonnageValues);
-const suggestedMaxTon = maxTon > 0 ? maxTon * 1.2 : 100;
-
-new Chart(document.getElementById('tonnageChart'), {
-    type: 'line',
-    data: {
-        labels: tonnageLabels,
-        datasets: [{
-            data: tonnageValues,
-            borderColor: '#198754',
-            backgroundColor: 'rgba(25, 135, 84, 0.1)',
-            fill: true,
-            tension: 0.3,
-            pointBackgroundColor: '#198754',
-            pointBorderColor: '#ffffff',
-            pointBorderWidth: 2,
-            pointRadius: 4
-        }]
-    },
-    options: {
-        responsive: true,
-        scales: {
-            y: {
-                beginAtZero: true,
-                suggestedMax: suggestedMaxTon,
-                grid: {
-                    color: '#f1f3f5'
-                }
-            },
-            x: {
-                grid: {
-                    display: false
-                }
-            }
-        },
-        plugins: {
-            legend: {
-                display: false
-            }
-        }
+    <?php if (!empty($tonnageData)): ?>
+    const ctxTonnage = document.getElementById('tonnageChart')?.getContext('2d');
+    if (ctxTonnage) {
+        DashboardCharts.initTonnage(
+            ctxTonnage,
+            <?= json_encode(array_column($tonnageData, 'workout_date')) ?>,
+            <?= json_encode(array_column($tonnageData, 'total_volume_kg')) ?>
+        );
     }
-});
-<?php endif ?>
+    <?php endif; ?>
 
-<?php if (!empty($muscleHeatmap)): ?>
-new Chart(document.getElementById('muscleRadarChart').getContext('2d'), {
-    type: 'radar',
-    data: {
-        labels: <?= json_encode(array_column($muscleHeatmap, 'muscle_group')) ?>,
-        datasets: [{
-            label: 'Volume (kg)',
-            data: <?= json_encode(array_column($muscleHeatmap, 'volume')) ?>,
-            backgroundColor: 'rgba(25, 135, 84, 0.2)',
-            borderColor: '#198754',
-            pointBackgroundColor: '#198754',
-            borderWidth: 2
-        }]
-    },
-    options: {
-        plugins: {
-            legend: {
-                display: false
-            }
-        },
-        scales: {
-            r: {
-                ticks: {
-                    display: false
-                },
-                grid: {
-                    color: '#e9ecef'
-                },
-                angleLines: {
-                    color: '#e9ecef'
-                }
-            }
-        }
+    <?php if (!empty($muscleHeatmap)): ?>
+    const ctxRadar = document.getElementById('muscleRadarChart')?.getContext('2d');
+    if (ctxRadar) {
+        DashboardCharts.initRadar(
+            ctxRadar,
+            <?= json_encode(array_column($muscleHeatmap, 'muscle_group')) ?>,
+            <?= json_encode(array_column($muscleHeatmap, 'volume')) ?>
+        );
     }
+    <?php endif; ?>
 });
-<?php endif; ?>
 </script>
 <?= $this->endSection() ?>

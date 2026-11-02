@@ -18,7 +18,7 @@ $this->setData([
         <div class="card-body py-4">
             <p class="text-muted small mb-4">Sélectionnez un exercice pour visualiser l'évolution de vos charges
                 maximales au fil des séances de musculation.</p>
-            <form onsubmit="event.preventDefault(); goToExercise();">
+            <form onsubmit="event.preventDefault(); goToExercise('<?= site_url('exercise/') ?>');">
                 <div class="mb-3">
                     <select id="exerciseSelectGraph" class="form-select form-select-lg fw-semibold" required>
                         <option value="">Sélectionner un exercice...</option>
@@ -34,13 +34,4 @@ $this->setData([
         </div>
     </div>
 </div>
-
-<script>
-function goToExercise() {
-    const id = document.getElementById('exerciseSelectGraph').value;
-    if (id) {
-        window.location.href = "<?= site_url('exercise/') ?>" + id;
-    }
-}
-</script>
 <?= $this->endSection() ?>
