@@ -1,4 +1,6 @@
-<?php namespace App\Models;
+<?php
+
+namespace App\Models;
 
 use CodeIgniter\Model;
 
@@ -21,7 +23,7 @@ class WorkoutSetModel extends Model
     {
         $sql = "
             SELECT 
-                 DATE_FORMAT(COALESCE(sa.started_at, sw.date), '%Y-%m-%d') as workout_date,
+                DATE_FORMAT(COALESCE(sa.started_at, sw.date), '%Y-%m-%d') as workout_date,
                 SUM(ws.reps * ws.weight) as total_volume_kg
             FROM strength_workouts sw
             JOIN workout_sets ws ON sw.id = ws.workout_id
@@ -36,10 +38,9 @@ class WorkoutSetModel extends Model
 
     public function getExerciseEvolution(int $userId, int $exerciseId): array
     {
-        // AJOUT : estimated_1rm basé sur la formule d'Epley
         $sql = "
             SELECT 
-                 DATE_FORMAT(COALESCE(sa.started_at, sw.date), '%Y-%m-%d') as workout_date,
+                DATE_FORMAT(COALESCE(sa.started_at, sw.date), '%Y-%m-%d') as workout_date,
                 ROUND(SUM(ws.weight * ws.reps), 0) as total_weight_lifted,
                 ROUND(AVG(ws.weight), 0) as weight_used,
                 SUM(ws.reps) as total_reps,
@@ -58,20 +59,15 @@ class WorkoutSetModel extends Model
     public function getWorkoutDetails(int $workoutId): array
     {
         $sql = "
-            SELECT 
-                 ws.set_number, ws.reps, ws.weight,
-                e.id as exercise_id, e.name as exercise_name, e.muscle_group
-            FROM workout_sets ws
-            JOIN exercises e ON ws.exercise_id = e.id
-            WHERE ws.workout_id = ?
-            ORDER BY ws.exercise_id, ws.set_number ASC
+        SELECT ws.set_number, ws.reps, ws.weight, e.id as exercise_id, e.name as exercise_name, mg.libelle as muscle_group 
+        FROM workout_sets ws 
+        JOIN exercises e ON ws.exercise_id = e.id 
+        LEFT JOIN muscle_group mg ON e.muscle_group_id = mg.muscle_group_id 
+        WHERE ws.workout_id = ? 
+        ORDER BY ws.exercise_id, ws.set_number ASC;
         ";
         return $this->db->query($sql, [$workoutId])->getResultArray();
     }
-
-    // ==========================================
-    // AJOUTS PREMIUM
-    // ==========================================
 
     public function getRecentStrengthLoad(int $userId, int $days = 7): float
     {
@@ -87,12 +83,14 @@ class WorkoutSetModel extends Model
     public function getMuscleHeatmap(int $userId, int $days = 15): array
     {
         $sql = "
-            SELECT e.muscle_group, COALESCE(SUM(ws.reps * ws.weight), 0) as volume
+            SELECT mg.libelle as muscle_group, COALESCE(SUM(ws.reps * ws.weight), 0) as volume
             FROM strength_workouts sw
             JOIN workout_sets ws ON sw.id = ws.workout_id
             JOIN exercises e ON ws.exercise_id = e.id
-            WHERE sw.user_id = ? AND sw.date >= DATE_SUB(CURDATE(), INTERVAL ? DAY) AND e.muscle_group IS NOT NULL
-            GROUP BY e.muscle_group
+            JOIN muscle_group mg ON e.muscle_group_id = mg.muscle_group_id
+            WHERE sw.user_id = ? AND sw.date >= DATE_SUB(CURDATE(), INTERVAL ? DAY) AND mg.libelle IS NOT NULL
+            GROUP BY mg.libelle
+            ORDER BY mg.Ordre ASC;
         ";
         return $this->db->query($sql, [$userId, $days])->getResultArray();
     }

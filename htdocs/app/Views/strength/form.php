@@ -59,7 +59,6 @@
 </head>
 
 <body>
-
     <nav class="navbar navbar-light bg-white border-bottom mb-4">
         <div class="container">
             <a class="text-decoration-none fw-semibold text-dark" href="<?= site_url('/') ?>">
@@ -67,7 +66,6 @@
             </a>
         </div>
     </nav>
-
     <main class="container mb-5" style="max-width: 500px;">
         <h1 class="h4 mb-1 fw-bold"><?= esc($title) ?></h1>
         <p class="text-muted small mb-4">Date : <?= date('d/m/Y', strtotime($date)) ?></p>
@@ -84,10 +82,11 @@
                     onchange="toggleNewExercise()">
                     <option value="">Sélectionner un exercice...</option>
                     <?php foreach ($exercises as $ex): ?>
-                    <option value="<?= esc($ex['id']) ?>"><?= esc($ex['name']) ?> (<?= esc($ex['muscle_group']) ?>)
+                    <option value="<?= esc($ex['id']) ?>"><?= esc($ex['name']) ?>
+                        (<?= esc($ex['muscle_group'] ?? 'Autre') ?>)
                     </option>
                     <?php endforeach; ?>
-                    <option value="new" class="text-primary fw-bold">➕ Créer un nouvel exercice...</option>
+                    <option value="new" class="text-primary fw-bold">+ Créer un nouvel exercice...</option>
                 </select>
             </div>
 
@@ -100,8 +99,12 @@
                 </div>
                 <div>
                     <label class="form-label small fw-bold">Groupe musculaire</label>
-                    <input type="text" name="new_exercise_group" class="form-control"
-                        placeholder="ex: Jambes / Dos / Pectoraux">
+                    <select name="new_exercise_group" class="form-select">
+                        <option value="">Sélectionner un groupe...</option>
+                        <?php foreach ($muscleGroups as $mg): ?>
+                        <option value="<?= esc($mg['libelle']) ?>"><?= esc($mg['libelle']) ?></option>
+                        <?php endforeach; ?>
+                    </select>
                 </div>
             </div>
 
@@ -147,7 +150,7 @@
                     <line x1="12" y1="5" x2="12" y2="19"></line>
                     <line x1="5" y1="12" x2="19" y2="12"></line>
                 </svg>
-                Añadir serie
+                Ajouter une série
             </button>
 
             <div class="mb-4">

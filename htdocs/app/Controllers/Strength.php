@@ -1,4 +1,6 @@
-<?php namespace App\Controllers;
+<?php
+
+namespace App\Controllers;
 
 use App\Models\StrengthWorkoutModel;
 use App\Models\WorkoutSetModel;
@@ -10,7 +12,11 @@ class Strength extends BaseController
     public function index()
     {
         $db = \Config\Database::connect();
-        $exercises = $db->table('exercises')->orderBy('name', 'ASC')->get()->getResultArray();
+        $exercises = $db->table('exercises')
+            ->select('exercises.id, exercises.name, muscle_group.libelle as muscle_group')
+            ->join('muscle_group', 'muscle_group.muscle_group_id = exercises.muscle_group_id', 'left')
+            ->orderBy('exercises.name', 'ASC')
+            ->get()->getResultArray();
         
         return view('strength/index', [
             'title' => 'Progression Musculation',
@@ -27,7 +33,6 @@ class Strength extends BaseController
         $userId = auth()->id();
         $workoutModel = new StrengthWorkoutModel();
         
-        // Vérification renforcée pour s'assurer que la séance appartient bien à l'utilisateur
         $workout = $workoutModel->where('strava_activity_id', $id)->where('user_id', $userId)->first();
         if (!$workout && is_numeric($id)) {
             $workout = $workoutModel->where('id', (int)$id)->where('user_id', $userId)->first();
@@ -65,7 +70,7 @@ class Strength extends BaseController
                 $exercises[$exId] = [
                     'id'           => $exId,
                     'name'         => $set['exercise_name'],
-                    'muscle_group' => $set['muscle_group'],
+                    'muscle_group' => $set['muscle_group'] ?? 'Autre',
                     'sets'         => []
                 ];
             }
@@ -89,14 +94,18 @@ class Strength extends BaseController
 
         $userId = auth()->id();
         $db = \Config\Database::connect();
-        $exercise = $db->table('exercises')->where('id', (int)$id)->get()->getRowArray();
+        
+        $exercise = $db->table('exercises')
+            ->select('exercises.*, muscle_group.libelle as muscle_group')
+            ->join('muscle_group', 'muscle_group.muscle_group_id = exercises.muscle_group_id', 'left')
+            ->where('exercises.id', (int)$id)
+            ->get()->getRowArray();
 
         if (!$exercise) {
             throw PageNotFoundException::forPageNotFound();
         }
 
         $setModel = new WorkoutSetModel();
-        // Modification ICI : On filtre sur l'utilisateur
         $evolution = $setModel->getExerciseEvolution($userId, (int)$id);
 
         return view('strength/exercise', [
@@ -114,14 +123,22 @@ class Strength extends BaseController
         $workoutId = $this->request->getGet('workout_id') ?? '';
 
         $db = \Config\Database::connect();
-        $exercises = $db->table('exercises')->orderBy('name', 'ASC')->get()->getResultArray();
+        $exercises = $db->table('exercises')
+            ->select('exercises.id, exercises.name, muscle_group.libelle as muscle_group')
+            ->join('muscle_group', 'muscle_group.muscle_group_id = exercises.muscle_group_id', 'left')
+            ->orderBy('exercises.name', 'ASC')
+            ->get()->getResultArray();
+
+        // Ajout : Récupérer tous les groupes musculaires pour le menu déroulant
+        $muscleGroups = $db->table('muscle_group')->orderBy('Ordre', 'ASC')->get()->getResultArray();
 
         return view('strength/form', [
-            'title'     => 'Renseigner : ' . $name,
-            'date'      => $date,
-            'stravaId'  => $stravaId,
-            'workoutId' => $workoutId,
-            'exercises' => $exercises
+            'title'        => 'Renseigner : ' . $name,
+            'date'         => $date,
+            'stravaId'     => $stravaId,
+            'workoutId'    => $workoutId,
+            'exercises'    => $exercises,
+            'muscleGroups' => $muscleGroups
         ]);
     }
 
@@ -135,7 +152,6 @@ class Strength extends BaseController
         
         $workoutModel = new StrengthWorkoutModel();
         
-        // 1. Si aucun workoutId n'est passé, on vérifie si une séance existe déjà pour ce strava_id ou cette date
         if (empty($workoutId)) {
             $existingWorkout = null;
             if (!empty($stravaId)) {
@@ -152,7 +168,6 @@ class Strength extends BaseController
             if ($existingWorkout) {
                 $workoutId = $existingWorkout['id'];
             } else {
-                // Récupérer la vraie date depuis strava_activities si stravaId est fourni
                 $workoutDateTime = ($date ?: date('Y-m-d')) . ' 12:00:00';
                 if (!empty($stravaId)) {
                     $activityModel = new ActivityModel();
@@ -163,7 +178,7 @@ class Strength extends BaseController
                         $workoutDateTime = $stravaAct['started_at'];
                     }
                 }
-
+                
                 $workoutId = $workoutModel->insert([
                     'user_id'            => $userId,
                     'strava_activity_id' => $stravaId ?: null,
@@ -180,9 +195,22 @@ class Strength extends BaseController
         $db = \Config\Database::connect();
 
         if ($exerciseId === 'new' && !empty($newExerciseName)) {
+            $groupLibelle = trim($newExerciseGroup);
+            $mg = $db->table('muscle_group')->where('libelle', $groupLibelle)->get()->getRow();
+            
+            if ($mg) {
+                $mgId = $mg->muscle_group_id;
+            } else {
+                $db->table('muscle_group')->insert([
+                    'libelle' => $groupLibelle,
+                    'Ordre' => 99
+                ]);
+                $mgId = $db->insertID();
+            }
+
             $db->table('exercises')->insert([
-                'name'         => trim($newExerciseName),
-                'muscle_group' => trim($newExerciseGroup)
+                'name'            => trim($newExerciseName),
+                'muscle_group_id' => $mgId
             ]);
             $exerciseId = $db->insertID();
         }
