@@ -68,10 +68,15 @@ class Dashboard extends BaseController
         $workoutModel  = new StrengthWorkoutModel();
         $tradModel     = new TradModel();
         
-        // CHARGEMENT OPTIMISÉ : 1 seule requête pour toutes les traductions
+        // CHARGEMENT OPTIMISÉ : 1 seule requête pour toutes les traductions (Correction N+1)
         $allTrads = $tradModel->getAllTrads();
         
-        $recentActivities = $activityModel->getActivitiesSince($userId, 6);
+        // OPTIMISATION FRONT-END : On limite aux 6 derniers mois pour correspondre au graphique et alléger le JSON JavaScript
+        $dateLimit = date('Y-m-d H:i:s', strtotime('-6 months'));
+        $recentActivities = $activityModel->where('user_id', $userId)
+                                          ->where('started_at >=', $dateLimit)
+                                          ->orderBy('started_at', 'DESC')
+                                          ->findAll();
         
         $activitiesBySport = [];
         $recentWorkouts = [];
@@ -113,7 +118,6 @@ class Dashboard extends BaseController
                 continue;
             }
             
-            // UTILISATION DU DICTIONNAIRE EN MÉMOIRE
             $sportTraduit = $allTrads[$sport] ?? $sport;
             
             $activitiesBySport[$sportTraduit][] = $act;
@@ -130,7 +134,6 @@ class Dashboard extends BaseController
         
         foreach ($currentMonthStats as &$monthStat) {
             $sport = $monthStat['sport'] ?: 'Autre';
-            // UTILISATION DU DICTIONNAIRE EN MÉMOIRE
             $monthStat['sport_trad'] = $allTrads[$sport] ?? $sport;
         }
         unset($monthStat);
@@ -161,7 +164,6 @@ class Dashboard extends BaseController
         $activityModel = new ActivityModel();
         $tradModel = new TradModel();
         
-        // CHARGEMENT OPTIMISÉ
         $allTrads = $tradModel->getAllTrads();
         
         $activities = $activityModel->getActivitiesSince($userId);
@@ -175,7 +177,6 @@ class Dashboard extends BaseController
         if ($activities) {
             foreach ($activities as &$activity) {
                 $sport = $activity['sport'] ?: 'Autre';
-                // UTILISATION DU DICTIONNAIRE EN MÉMOIRE
                 $activity['sport'] = $allTrads[$sport] ?? "$sport (non traduit)";
             }
             unset($activity);
@@ -184,7 +185,6 @@ class Dashboard extends BaseController
         if ($globalStats) {
             foreach ($globalStats as &$global) {
                 $sport = $global['sport'] ?: 'Autre';
-                // UTILISATION DU DICTIONNAIRE EN MÉMOIRE
                 $global['sport'] = $allTrads[$sport] ?? "$sport (non traduit)";
             }
             unset($global);

@@ -1,4 +1,5 @@
-<?php if (!function_exists('formatDist')) {
+<?php
+if (!function_exists('formatDist')) {
     function formatDist($meters) {
         if ($meters < 1000) return number_format($meters, 0, ',', ' ') . ' m';
         return number_format($meters / 1000, 2, ',', ' ') . ' km';
@@ -12,7 +13,6 @@ if (!function_exists('formatTime')) {
     }
 }
 ?>
-
 <?= $this->extend('layout/main') ?>
 
 <?= $this->section('content') ?>
@@ -47,10 +47,12 @@ if (!function_exists('formatTime')) {
     <strong>Aucune activité récente.</strong> Connectez Strava et importez vos activités pour voir vos statistiques ici.
 </div>
 <?php else: ?>
+
 <?php if (!empty($activitiesBySport)): ?>
 <div class="mb-5">
-    <h2 class="h4 border-bottom pb-2 text-strava fw-bold">🚀 Cardio & Endurance</h2>
+    <h2 class="h4 border-bottom pb-2 text-strava fw-bold">🔥 Cardio & Endurance</h2>
     <div class="row g-4">
+
         <div class="col-12 col-xl-6">
             <div class="row g-2">
                 <?php foreach ($activitiesBySport as $sport => $acts): ?>
@@ -83,6 +85,7 @@ if (!function_exists('formatTime')) {
                 <?php endforeach ?>
             </div>
         </div>
+
         <div class="col-12 col-xl-6">
             <div class="card h-100 shadow-sm border-0">
                 <div class="card-body">
@@ -103,7 +106,7 @@ if (!function_exists('formatTime')) {
                     <div class="card mt-4 border-0 shadow-sm">
                         <div class="card-body">
                             <div class="d-flex align-items-center mb-3">
-                                <h3 class="h6 fw-bold mb-0 text-muted">🔥 Série d'activités</h3>
+                                <h3 class="h6 fw-bold mb-0 text-muted">Série d'activités</h3>
                             </div>
                             <div class="row text-center">
                                 <div class="col-6 border-end">
@@ -120,6 +123,7 @@ if (!function_exists('formatTime')) {
                             </div>
                         </div>
                     </div>
+
                 </div>
             </div>
         </div>
@@ -133,7 +137,9 @@ if (!function_exists('formatTime')) {
         <h2 class="h4 pb-2 mb-4 section-title">💪 Renforcement & Musculation</h2>
         <a class="btn btn-outline-success btn-sm" href="<?= site_url('strength') ?>">Progression Muscu</a>
     </div>
+
     <div class="row g-4">
+
         <div class="col-12 col-xl-4">
             <div class="card h-100 border-0 shadow-sm">
                 <div class="card-body">
@@ -146,6 +152,7 @@ if (!function_exists('formatTime')) {
                 </div>
             </div>
         </div>
+
         <div class="col-12 col-xl-4">
             <div class="card h-100 border-0 shadow-sm">
                 <div class="card-body">
@@ -159,6 +166,7 @@ if (!function_exists('formatTime')) {
                 </div>
             </div>
         </div>
+
         <div class="col-12 col-xl-4">
             <div class="card h-100 border-0 shadow-sm">
                 <div class="card-body p-0">
@@ -199,14 +207,19 @@ if (!function_exists('formatTime')) {
                 </div>
             </div>
         </div>
+
     </div>
 </div>
 <?php endif ?>
+
 <?php endif; ?>
+
 <?= $this->endSection() ?>
 
 <?= $this->section('scripts') ?>
-<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<!-- L'attribut defer permet au navigateur de ne pas bloquer l'affichage de la page -->
+<script src="https://cdn.jsdelivr.net/npm/chart.js" defer></script>
+
 <script>
 document.addEventListener("DOMContentLoaded", function() {
     Chart.defaults.maintainAspectRatio = false;
