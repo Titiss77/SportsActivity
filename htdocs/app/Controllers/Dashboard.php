@@ -1,6 +1,4 @@
-<?php
-
-namespace App\Controllers;
+<?php namespace App\Controllers;
 
 use App\Models\ActivityModel;
 use App\Models\WorkoutSetModel;
@@ -14,11 +12,6 @@ class Dashboard extends BaseController
         $userId = auth()->id();
         $db = \Config\Database::connect();
         
-        $activityModel = new ActivityModel();
-        $strengthModel = new WorkoutSetModel();
-        $workoutModel  = new StrengthWorkoutModel();
-        $tradModel     = new TradModel();
-        
         $userSettings = $db->table('user_settings')->where('user_id', $userId)->get()->getRowArray();
         
         if (!$userSettings) {
@@ -29,8 +22,47 @@ class Dashboard extends BaseController
                 'goal_swim_km' => 20,
                 'goal_walk_km' => 20,
             ];
-        }
+        } elseif (!empty($userSettings['strava_access_token']) && isset($userSettings['strava_expires_at']) && $userSettings['strava_expires_at'] < time()) {
+            // Le token est expiré, tentative de renouvellement automatique
+            $client = \Config\Services::curlrequest();
+            try {
+                $response = $client->post('https://www.strava.com/oauth/token', [
+                    'form_params' => [
+                        'client_id'     => env('STRAVA_CLIENT_ID'),
+                        'client_secret' => env('STRAVA_CLIENT_SECRET'),
+                        'grant_type'    => 'refresh_token',
+                        'refresh_token' => $userSettings['strava_refresh_token'],
+                    ],
+                    'http_errors' => false
+                ]);
 
+                if ($response->getStatusCode() === 200) {
+                    $data = json_decode($response->getBody(), true);
+                    $userSettings['strava_access_token']  = $data['access_token'];
+                    $userSettings['strava_refresh_token'] = $data['refresh_token'];
+                    $userSettings['strava_expires_at']    = $data['expires_at'];
+
+                    $db->table('user_settings')->where('user_id', $userId)->update([
+                        'strava_access_token'  => $data['access_token'],
+                        'strava_refresh_token' => $data['refresh_token'],
+                        'strava_expires_at'    => $data['expires_at']
+                    ]);
+                } else {
+                    // Échec du rafraîchissement (autorisation révoquée, etc.)
+                    $userSettings['strava_access_token'] = null;
+                    $db->table('user_settings')->where('user_id', $userId)->update(['strava_access_token' => null]);
+                }
+            } catch (\Exception $e) {
+                // En cas d'erreur de connexion à l'API, on considère temporairement comme déconnecté
+                $userSettings['strava_access_token'] = null;
+            }
+        }
+        
+        $activityModel = new ActivityModel();
+        $strengthModel = new WorkoutSetModel();
+        $workoutModel  = new StrengthWorkoutModel();
+        $tradModel     = new TradModel();
+        
         $recentActivities = $activityModel->getActivitiesSince($userId, 6);
         
         $activitiesBySport = [];
@@ -46,6 +78,7 @@ class Dashboard extends BaseController
         $localWorkouts = $workoutModel->where('user_id', $userId)->findAll();
         $localWorkoutIdsByDate = [];
         $localWorkoutIdsByStrava = [];
+        
         foreach ($localWorkouts as $lw) {
             $localWorkoutIdsByDate[date('Y-m-d', strtotime($lw['date']))] = $lw['id'];
             if (!empty($lw['strava_activity_id'])) {
@@ -76,7 +109,6 @@ class Dashboard extends BaseController
             $sportTraduit = $tradModel->getTrad($sport) ?? $sport;
             
             $activitiesBySport[$sportTraduit][] = $act;
-
             $rawActivitiesForChart[] = [
                 'sport'    => $sportTraduit,
                 'date'     => date('Y-m', strtotime($act['started_at'])),
@@ -116,6 +148,11 @@ class Dashboard extends BaseController
     public function activities()
     {
         $userId = auth()->id();
+        $db = \Config\Database::connect();
+        
+        // Ajout indispensable de $userSettings pour gérer les accès dans le layout
+        $userSettings = $db->table('user_settings')->where('user_id', $userId)->get()->getRowArray();
+        
         $activityModel = new ActivityModel();
         $tradModel = new TradModel();
         
@@ -144,10 +181,11 @@ class Dashboard extends BaseController
         }
         
         $data = [
-            'title'      => 'Historique des Activités',
-            'allGlobal'  => $AllStats,
-            'globalStats' => $globalStats,
-            'activities' => $activities,
+            'title'        => 'Historique des Activités',
+            'userSettings' => $userSettings,
+            'allGlobal'    => $AllStats,
+            'globalStats'  => $globalStats,
+            'activities'   => $activities,
         ];
         
         return view('dashboard/activities', $data);

@@ -1,6 +1,4 @@
-<?php
-
-namespace App\Controllers;
+<?php namespace App\Controllers;
 
 use App\Models\ActivityModel;
 
@@ -68,7 +66,6 @@ class Strava extends BaseController
             } else {
                 return redirect()->to('/')->with('error', 'Échec de l\'authentification auprès de Strava.');
             }
-
         } catch (\Exception $e) {
             return redirect()->to('/')->with('error', 'Erreur API : ' . $e->getMessage());
         }
@@ -97,6 +94,40 @@ class Strava extends BaseController
 
         if (!$settings || empty($settings->strava_access_token)) {
             return redirect()->to('/')->with('error', 'Vous devez d\'abord connecter votre compte Strava.');
+        }
+
+        // Vérification et rafraîchissement du token AVANT la synchronisation
+        if ($settings->strava_expires_at < time()) {
+            $client = \Config\Services::curlrequest();
+            try {
+                $response = $client->post('https://www.strava.com/oauth/token', [
+                    'form_params' => [
+                        'client_id'     => env('STRAVA_CLIENT_ID'),
+                        'client_secret' => env('STRAVA_CLIENT_SECRET'),
+                        'grant_type'    => 'refresh_token',
+                        'refresh_token' => $settings->strava_refresh_token,
+                    ],
+                    'http_errors' => false
+                ]);
+
+                if ($response->getStatusCode() === 200) {
+                    $data = json_decode($response->getBody(), true);
+                    $settings->strava_access_token  = $data['access_token'];
+                    $settings->strava_refresh_token = $data['refresh_token'];
+                    $settings->strava_expires_at    = $data['expires_at'];
+
+                    $db->table('user_settings')->where('user_id', $userId)->update([
+                        'strava_access_token'  => $data['access_token'],
+                        'strava_refresh_token' => $data['refresh_token'],
+                        'strava_expires_at'    => $data['expires_at']
+                    ]);
+                } else {
+                    $db->table('user_settings')->where('user_id', $userId)->update(['strava_access_token' => null]);
+                    return redirect()->to('/')->with('error', 'Votre session Strava a expiré et l\'autorisation a été révoquée. Veuillez vous reconnecter.');
+                }
+            } catch (\Exception $e) {
+                return redirect()->to('/')->with('error', 'Erreur lors du rafraîchissement du token : ' . $e->getMessage());
+            }
         }
 
         $startDate = $this->request->getPost('start_date');
@@ -173,6 +204,7 @@ class Strava extends BaseController
                 }
 
                 $page++;
+
             } while (count($activities) === 100);
 
             $deletedCount = 0;
