@@ -22,39 +22,44 @@ class Dashboard extends BaseController
                 'goal_swim_km' => 20,
                 'goal_walk_km' => 20,
             ];
-        } elseif (!empty($userSettings['strava_access_token']) && isset($userSettings['strava_expires_at']) && $userSettings['strava_expires_at'] < time()) {
-            // Le token est expiré, tentative de renouvellement automatique
-            $client = \Config\Services::curlrequest();
-            try {
-                $response = $client->post('https://www.strava.com/oauth/token', [
-                    'form_params' => [
-                        'client_id'     => env('STRAVA_CLIENT_ID'),
-                        'client_secret' => env('STRAVA_CLIENT_SECRET'),
-                        'grant_type'    => 'refresh_token',
-                        'refresh_token' => $userSettings['strava_refresh_token'],
-                    ],
-                    'http_errors' => false
-                ]);
+        } else {
+            // Vérification et rafraîchissement automatique du token Strava
+            if (!empty($userSettings['strava_refresh_token'])) {
+                if (empty($userSettings['strava_expires_at']) || $userSettings['strava_expires_at'] < (time() + 300)) {
+                    $client = \Config\Services::curlrequest();
+                    try {
+                        $response = $client->post('https://www.strava.com/oauth/token', [
+                            'form_params' => [
+                                'client_id'     => env('STRAVA_CLIENT_ID'),
+                                'client_secret' => env('STRAVA_CLIENT_SECRET'),
+                                'grant_type'    => 'refresh_token',
+                                'refresh_token' => $userSettings['strava_refresh_token'],
+                            ],
+                            'http_errors' => false
+                        ]);
 
-                if ($response->getStatusCode() === 200) {
-                    $data = json_decode($response->getBody(), true);
-                    $userSettings['strava_access_token']  = $data['access_token'];
-                    $userSettings['strava_refresh_token'] = $data['refresh_token'];
-                    $userSettings['strava_expires_at']    = $data['expires_at'];
-
-                    $db->table('user_settings')->where('user_id', $userId)->update([
-                        'strava_access_token'  => $data['access_token'],
-                        'strava_refresh_token' => $data['refresh_token'],
-                        'strava_expires_at'    => $data['expires_at']
-                    ]);
-                } else {
-                    // Échec du rafraîchissement (autorisation révoquée, etc.)
-                    $userSettings['strava_access_token'] = null;
-                    $db->table('user_settings')->where('user_id', $userId)->update(['strava_access_token' => null]);
+                        if ($response->getStatusCode() === 200) {
+                            $data = json_decode($response->getBody(), true);
+                            $updateData = [
+                                'strava_access_token'  => $data['access_token'],
+                                'strava_refresh_token' => $data['refresh_token'],
+                                'strava_expires_at'    => $data['expires_at']
+                            ];
+                            $db->table('user_settings')->where('user_id', $userId)->update($updateData);
+                            $userSettings = array_merge($userSettings, $updateData);
+                        } else {
+                            $clearData = [
+                                'strava_access_token'  => null,
+                                'strava_refresh_token' => null,
+                                'strava_expires_at'    => null
+                            ];
+                            $db->table('user_settings')->where('user_id', $userId)->update($clearData);
+                            $userSettings = array_merge($userSettings, $clearData);
+                        }
+                    } catch (\Exception $e) {
+                        $userSettings['strava_access_token'] = null;
+                    }
                 }
-            } catch (\Exception $e) {
-                // En cas d'erreur de connexion à l'API, on considère temporairement comme déconnecté
-                $userSettings['strava_access_token'] = null;
             }
         }
         
@@ -62,6 +67,9 @@ class Dashboard extends BaseController
         $strengthModel = new WorkoutSetModel();
         $workoutModel  = new StrengthWorkoutModel();
         $tradModel     = new TradModel();
+        
+        // CHARGEMENT OPTIMISÉ : 1 seule requête pour toutes les traductions
+        $allTrads = $tradModel->getAllTrads();
         
         $recentActivities = $activityModel->getActivitiesSince($userId, 6);
         
@@ -78,7 +86,6 @@ class Dashboard extends BaseController
         $localWorkouts = $workoutModel->where('user_id', $userId)->findAll();
         $localWorkoutIdsByDate = [];
         $localWorkoutIdsByStrava = [];
-        
         foreach ($localWorkouts as $lw) {
             $localWorkoutIdsByDate[date('Y-m-d', strtotime($lw['date']))] = $lw['id'];
             if (!empty($lw['strava_activity_id'])) {
@@ -106,9 +113,11 @@ class Dashboard extends BaseController
                 continue;
             }
             
-            $sportTraduit = $tradModel->getTrad($sport) ?? $sport;
+            // UTILISATION DU DICTIONNAIRE EN MÉMOIRE
+            $sportTraduit = $allTrads[$sport] ?? $sport;
             
             $activitiesBySport[$sportTraduit][] = $act;
+
             $rawActivitiesForChart[] = [
                 'sport'    => $sportTraduit,
                 'date'     => date('Y-m', strtotime($act['started_at'])),
@@ -121,7 +130,8 @@ class Dashboard extends BaseController
         
         foreach ($currentMonthStats as &$monthStat) {
             $sport = $monthStat['sport'] ?: 'Autre';
-            $monthStat['sport_trad'] = $tradModel->getTrad($sport) ?? $sport;
+            // UTILISATION DU DICTIONNAIRE EN MÉMOIRE
+            $monthStat['sport_trad'] = $allTrads[$sport] ?? $sport;
         }
         unset($monthStat);
 
@@ -141,20 +151,18 @@ class Dashboard extends BaseController
             'muscleHeatmap'         => $muscleHeatmap,
             'streakStats'           => $streakStats,
         ];
-
+        
         return view('dashboard/index', $data);
     }
 
     public function activities()
     {
         $userId = auth()->id();
-        $db = \Config\Database::connect();
-        
-        // Ajout indispensable de $userSettings pour gérer les accès dans le layout
-        $userSettings = $db->table('user_settings')->where('user_id', $userId)->get()->getRowArray();
-        
         $activityModel = new ActivityModel();
         $tradModel = new TradModel();
+        
+        // CHARGEMENT OPTIMISÉ
+        $allTrads = $tradModel->getAllTrads();
         
         $activities = $activityModel->getActivitiesSince($userId);
         $globalStats = $activityModel->getStatsBySport($userId);
@@ -167,7 +175,8 @@ class Dashboard extends BaseController
         if ($activities) {
             foreach ($activities as &$activity) {
                 $sport = $activity['sport'] ?: 'Autre';
-                $activity['sport'] = $tradModel->getTrad($sport) ?? "$sport (non traduit)";
+                // UTILISATION DU DICTIONNAIRE EN MÉMOIRE
+                $activity['sport'] = $allTrads[$sport] ?? "$sport (non traduit)";
             }
             unset($activity);
         }
@@ -175,17 +184,17 @@ class Dashboard extends BaseController
         if ($globalStats) {
             foreach ($globalStats as &$global) {
                 $sport = $global['sport'] ?: 'Autre';
-                $global['sport'] = $tradModel->getTrad($sport) ?? "$sport (non traduit)";
+                // UTILISATION DU DICTIONNAIRE EN MÉMOIRE
+                $global['sport'] = $allTrads[$sport] ?? "$sport (non traduit)";
             }
             unset($global);
         }
         
         $data = [
-            'title'        => 'Historique des Activités',
-            'userSettings' => $userSettings,
-            'allGlobal'    => $AllStats,
-            'globalStats'  => $globalStats,
-            'activities'   => $activities,
+            'title'      => 'Historique des Activités',
+            'allGlobal'  => $AllStats,
+            'globalStats' => $globalStats,
+            'activities' => $activities,
         ];
         
         return view('dashboard/activities', $data);

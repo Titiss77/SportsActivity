@@ -6,7 +6,7 @@ class TradModel extends Model
 {
     protected $table            = 'traduction_activities';
     protected $primaryKey       = 'id';
-    protected $returnType       = 'array'; // Corrigé : CodeIgniter n'accepte pas 'String|array|null' ici
+    protected $returnType       = 'array';
     protected $allowedFields    = ['id', 'nom_base', 'nom_trad'];
 
     public function getTrad(string $nomBase): ?string
@@ -15,5 +15,16 @@ class TradModel extends Model
         $row = $this->db->query($sql, [$nomBase])->getRow();
         
         return $row ? $row->nom_trad : null;
+    }
+
+    // NOUVELLE FONCTION : Charge tout le dictionnaire en 1 seule requête
+    public function getAllTrads(): array
+    {
+        $result = $this->findAll();
+        $trads = [];
+        foreach ($result as $row) {
+            $trads[$row['nom_base']] = $row['nom_trad'];
+        }
+        return $trads;
     }
 }
